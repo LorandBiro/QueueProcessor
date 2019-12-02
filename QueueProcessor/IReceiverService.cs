@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace QueueProcessor.Internals
+namespace QueueProcessor
 {
     public interface IReceiverService<TMessage>
     {

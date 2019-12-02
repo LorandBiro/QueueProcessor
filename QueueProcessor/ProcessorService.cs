@@ -1,5 +1,4 @@
-﻿using QueueProcessor.Internals;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,8 +23,6 @@ namespace QueueProcessor
             IRetryPolicy? retryPolicy = null)
         {
         }
-
-        public event MessageEventHandler<TMessage>? Processed;
 
         public void Enqueue(IEnumerable<TMessage> messages)
         {

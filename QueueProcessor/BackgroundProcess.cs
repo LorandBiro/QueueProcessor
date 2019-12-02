@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor.Internals
+namespace QueueProcessor
 {
     public sealed class BackgroundProcess : IDisposable
     {

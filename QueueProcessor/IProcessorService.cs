@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace QueueProcessor.Internals
+namespace QueueProcessor
 {
     public interface IProcessorService<TMessage>
     {
@@ -11,7 +11,5 @@ namespace QueueProcessor.Internals
         Task StopAsync();
 
         void Enqueue(IEnumerable<TMessage> messages);
-
-        event MessageEventHandler<TMessage> Processed;
     }
 }
