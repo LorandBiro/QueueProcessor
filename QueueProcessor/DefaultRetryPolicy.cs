@@ -36,11 +36,15 @@ namespace QueueProcessor
 
         public TimeSpan GetDelay()
         {
-            TimeSpan maxDelay = this.ErrorCount <= 1 ? TimeSpan.Zero : TimeSpan.FromSeconds(1 << (this.ErrorCount - 1));
+            if (this.ErrorCount <= 1)
+            {
+                return TimeSpan.Zero;
+            }
+
             lock (Random)
             {
                 // Random isn't thread safe, concurrent calls can corrupt it's internal state, so we lock here.
-                return maxDelay * Random.NextDouble();
+                return TimeSpan.FromSeconds(1 << (this.ErrorCount - 1)) * Random.NextDouble();
             }
         }
     }
