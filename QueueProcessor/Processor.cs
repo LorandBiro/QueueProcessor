@@ -15,17 +15,19 @@ namespace QueueProcessor
 
         private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> processor;
         private readonly ILogger<TMessage> logger;
+        private readonly int maxBatchSize;
         private readonly Func<Job<TMessage>, Op> onSuccess;
         private readonly Func<Job<TMessage>, Op> onFailure;
         private readonly IRetryPolicy retryPolicy;
-        private readonly List<TaskRunner> backgroundProcesses = new List<TaskRunner>();
+        private readonly List<TaskRunner> runners = new List<TaskRunner>();
+        private readonly BatchingQueue<Job<TMessage>> queue;
 
         public Processor(
             string name,
             Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> processor,
             ILogger<TMessage>? logger = null,
             int concurrency = 1,
-            int maxBatchSize = 0,
+            int maxBatchSize = 1,
             TimeSpan maxBatchDelay = default,
             Func<Job<TMessage>, Op>? onSuccess = null,
             Func<Job<TMessage>, Op>? onFailure = null,
@@ -39,35 +41,29 @@ namespace QueueProcessor
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.processor = processor ?? throw new ArgumentNullException(nameof(processor));
             this.logger = logger ?? new DebugLogger<TMessage>();
-            this.onSuccess = onSuccess ?? OnSuccessDefault;
-            this.onFailure = onFailure ?? OnFailureDefault;
-            this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
             for (int i = 0; i < concurrency; i++)
             {
                 TaskRunner runner = new TaskRunner(this.MainAsync);
                 runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
-                this.backgroundProcesses.Add(runner);
+                this.runners.Add(runner);
             }
+
+            this.maxBatchSize = maxBatchSize;
+            this.queue = new BatchingQueue<Job<TMessage>>();
+            this.onSuccess = onSuccess ?? OnSuccessDefault;
+            this.onFailure = onFailure ?? OnFailureDefault;
+            this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
         }
 
         public string Name { get; }
 
         public event Action<IEnumerable<TMessage>>? Closed;
 
-        public void Enqueue(IEnumerable<TMessage> messages)
-        {
-            throw new NotImplementedException();
-        }
+        public void Enqueue(IEnumerable<TMessage> messages) => this.queue.Enqueue(messages.Select(x => new Job<TMessage>(x)));
 
-        public void Start()
-        {
-            throw new NotImplementedException();
-        }
+        public void Start() => this.runners.ForEach(x => x.Start());
 
-        public Task StopAsync()
-        {
-            throw new NotImplementedException();
-        }
+        public Task StopAsync() => Task.WhenAll(this.runners.Select(x => x.StopAsync()));
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)
@@ -75,7 +71,7 @@ namespace QueueProcessor
             while (true)
             {
                 await Task.Delay(this.retryPolicy.GetDelay(), cancellationToken).ConfigureAwait(false);
-                List<Job<TMessage>> jobs = new List<Job<TMessage>>();
+                IReadOnlyList<Job<TMessage>> jobs = await this.queue.DequeueAsync(this.maxBatchSize, cancellationToken).ConfigureAwait(false);
                 try
                 {
                     await this.processor(jobs, cancellationToken).ConfigureAwait(false);
@@ -101,7 +97,7 @@ namespace QueueProcessor
             }
         }
 
-        private void HandleResults(List<Job<TMessage>> jobs, Func<Job<TMessage>, Op> onResult)
+        private void HandleResults(IReadOnlyList<Job<TMessage>> jobs, Func<Job<TMessage>, Op> onResult)
         {
             var jobsWithOps = jobs.Select(x => new { x.Message, x.Result, Op = onResult(x) }).ToList();
             foreach (var jobWithOp in jobsWithOps)
