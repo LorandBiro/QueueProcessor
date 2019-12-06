@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 
 namespace QueueProcessor
 {
@@ -7,6 +6,11 @@ namespace QueueProcessor
     {
         private Result(bool isError, string? code, Exception? exception)
         {
+            if (!isError && exception != null)
+            {
+                throw new ArgumentException("Successful response cannot have an exception.", nameof(exception));
+            }
+
             this.IsError = isError;
             this.Code = code;
             this.Exception = exception;
@@ -29,5 +33,9 @@ namespace QueueProcessor
         public override int GetHashCode() => HashCode.Combine(this.IsError, this.Code, this.Exception);
         public static bool operator ==(Result left, Result right) => left.Equals(right);
         public static bool operator !=(Result left, Result right) => !(left == right);
+
+        public override string ToString() => this.IsError
+            ? (this.Code == null ? "Failed" : "Failed(" + this.Code + ")")
+            : (this.Code == null ? "Done" : "Done(" + this.Code + ")");
     }
 }

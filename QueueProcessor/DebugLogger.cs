@@ -3,31 +3,31 @@ using System.Diagnostics;
 
 namespace QueueProcessor
 {
-    public sealed class DebugLogger : ILogger
+    public sealed class DebugLogger<TMessage> : ILogger<TMessage>
     {
-        public void LogError(Exception exception)
+        public void LogMessageFailed(string service, TMessage message, Result result, Op op)
         {
-            if (exception is null)
-            {
-                throw new ArgumentNullException(nameof(exception));
-            }
-
-            Debug.Fail(exception.ToString());
+            Debug.Fail($"{service}: {message} {result} => {op}", result.Exception?.ToString());
         }
 
-        public void LogError(Exception exception, string message)
+        public void LogMessageProcessed(string service, TMessage message, Result result, Op op)
+        {
+            Debug.WriteLine($"{service}: {message} {result} => {op}");
+        }
+
+        public void LogMessageReceived(string service, TMessage message)
+        {
+            Debug.WriteLine($"{service}: {message} received");
+        }
+
+        public void LogServiceException(string service, Exception exception)
         {
             if (exception is null)
             {
                 throw new ArgumentNullException(nameof(exception));
             }
 
-            if (message is null)
-            {
-                throw new ArgumentNullException(nameof(message));
-            }
-
-            Debug.Fail(message, exception.ToString());
+            Debug.Fail($"{service}: unexpected exception", exception.ToString());
         }
     }
 }

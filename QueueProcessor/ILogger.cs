@@ -2,9 +2,12 @@
 
 namespace QueueProcessor
 {
-    public interface ILogger
+    public interface ILogger<TMessage>
     {
-        void LogError(Exception exception);
-        void LogError(Exception exception, string message);
+        void LogMessageReceived(string service, TMessage message);
+        void LogMessageProcessed(string service, TMessage message, Result result, Op op);
+        void LogMessageFailed(string service, TMessage message, Result result, Op op);
+
+        void LogServiceException(string service, Exception exception);
     }
 }

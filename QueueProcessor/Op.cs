@@ -19,6 +19,7 @@ namespace QueueProcessor
         }
 
         public IProcessorService<TMessage> Processor { get; }
+        public override string ToString() => "Transfer to " + this.Processor.Name;
     }
 
     public sealed class RetryOp : Op
@@ -34,7 +35,12 @@ namespace QueueProcessor
         }
 
         public TimeSpan Delay { get; }
+
+        public override string ToString() => this.Delay == TimeSpan.Zero ? "Retry" : "Retry in " + this.Delay;
     }
 
-    public sealed class CloseOp : Op { }
+    public sealed class CloseOp : Op
+    {
+        public override string ToString() => "Close";
+    }
 }

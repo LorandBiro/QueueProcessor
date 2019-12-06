@@ -5,19 +5,20 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor
 {
-    public sealed class BackgroundProcess : IDisposable
+    public sealed class TaskRunner : IDisposable
     {
-        private readonly ILogger logger;
-        private readonly Func<CancellationToken, Task> mainAsync;
+        private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(1.0);
 
+        private readonly Func<CancellationToken, Task> mainAsync;
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private Task? task;
 
-        public BackgroundProcess(ILogger logger, Func<CancellationToken, Task> main)
+        public TaskRunner(Func<CancellationToken, Task> main)
         {
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.mainAsync = main ?? throw new ArgumentNullException(nameof(main));
         }
+
+        public event ThreadExceptionEventHandler? Exception;
 
         public void Start()
         {
@@ -49,14 +50,15 @@ namespace QueueProcessor
                 {
                     await this.mainAsync(cancellationTokenSource.Token).ConfigureAwait(false);
                 }
-                catch (Exception e)
+                catch (Exception exception)
                 {
-                    if (e is OperationCanceledException oce && oce.CancellationToken == this.cancellationTokenSource.Token)
+                    if (exception is OperationCanceledException oce && oce.CancellationToken == this.cancellationTokenSource.Token)
                     {
                         return;
                     }
 
-                    this.logger.LogError(e);
+                    this.Exception?.Invoke(this, new ThreadExceptionEventArgs(exception));
+                    await Task.Delay(RestartDelay).ConfigureAwait(false);
                 }
             }
         }

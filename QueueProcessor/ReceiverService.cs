@@ -13,16 +13,17 @@ namespace QueueProcessor
     {
         private readonly MessageReceiver<TMessage> receiver;
         private readonly Func<TMessage, IProcessorService<TMessage>> router;
-        private readonly ILogger logger;
+        private readonly ILogger<TMessage> logger;
         private readonly IReceiverStrategy receiverStrategy;
         private readonly IRetryPolicy retryPolicy;
-        private readonly List<BackgroundProcess> backgroundProcesses = new List<BackgroundProcess>();
+        private readonly List<TaskRunner> backgroundProcesses = new List<TaskRunner>();
         private readonly ReceiverLimiter limiter;
 
         public ReceiverService(
+            string name,
             MessageReceiver<TMessage> receiver,
             Func<TMessage, IProcessorService<TMessage>> router,
-            ILogger? logger = null,
+            ILogger<TMessage>? logger = null,
             IReceiverStrategy? receiverStrategy = null,
             IRetryPolicy? retryPolicy = null,
             int concurrency = 1,
@@ -33,18 +34,23 @@ namespace QueueProcessor
                 throw new ArgumentOutOfRangeException(nameof(concurrency), concurrency, "Concurrency must be at least 1.");
             }
 
+            this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
-            this.logger = logger ?? new DebugLogger();
+            this.logger = logger ?? new DebugLogger<TMessage>();
             this.receiverStrategy = receiverStrategy ?? new ConstantRateRandomReceiverStrategy(TimeSpan.FromSeconds(5.0));
             this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
             for (int i = 0; i < concurrency; i++)
             {
-                this.backgroundProcesses.Add(new BackgroundProcess(this.logger, this.MainAsync));
+                TaskRunner runner = new TaskRunner(this.MainAsync);
+                runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
+                this.backgroundProcesses.Add(runner);
             }
 
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
         }
+
+        public string Name { get; }
 
         public void OnClosed(IEnumerable<TMessage> messages)
         {
@@ -74,6 +80,11 @@ namespace QueueProcessor
                 try
                 {
                     IReadOnlyCollection<TMessage> batch = await this.receiver(cancellationToken).ConfigureAwait(false);
+                    foreach (TMessage message in batch)
+                    {
+                        this.logger.LogMessageReceived(this.Name, message);
+                    }
+
                     foreach (IGrouping<IProcessorService<TMessage>, TMessage> group in batch.GroupBy(x => this.router(x), x => x))
                     {
                         group.Key.Enqueue(group);
@@ -82,15 +93,14 @@ namespace QueueProcessor
                     this.retryPolicy.OnSuccess();
                     previousBatchSize = batch.Count;
                 }
-                catch (Exception e)
+                catch (Exception exception)
                 {
-                    if (e is OperationCanceledException oce && oce.CancellationToken == cancellationToken)
+                    if (exception is OperationCanceledException oce && oce.CancellationToken == cancellationToken)
                     {
                         throw;
                     }
 
                     this.retryPolicy.OnFailure();
-                    this.logger.LogError(e);
                 }
             }
         }

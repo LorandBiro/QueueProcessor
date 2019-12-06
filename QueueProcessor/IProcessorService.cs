@@ -6,6 +6,8 @@ namespace QueueProcessor
 {
     public interface IProcessorService<TMessage>
     {
+        string Name { get; }
+
         void Start();
 
         Task StopAsync();
