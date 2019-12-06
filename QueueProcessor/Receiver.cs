@@ -1,4 +1,5 @@
-﻿using System;
+﻿using QueueProcessor.Internal;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -7,22 +8,20 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor
 {
-    public delegate Task<IReadOnlyCollection<TMessage>> MessageReceiver<TMessage>(CancellationToken cancellationToken);
-
-    public sealed class ReceiverService<TMessage> : IReceiverService<TMessage>
+    public sealed class Receiver<TMessage> : IReceiver<TMessage>
     {
-        private readonly MessageReceiver<TMessage> receiver;
-        private readonly Func<TMessage, IProcessorService<TMessage>> router;
+        private readonly Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> receiver;
+        private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly ILogger<TMessage> logger;
         private readonly IReceiverStrategy receiverStrategy;
         private readonly IRetryPolicy retryPolicy;
         private readonly List<TaskRunner> backgroundProcesses = new List<TaskRunner>();
         private readonly ReceiverLimiter limiter;
 
-        public ReceiverService(
+        public Receiver(
             string name,
-            MessageReceiver<TMessage> receiver,
-            Func<TMessage, IProcessorService<TMessage>> router,
+            Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> receiver,
+            Func<TMessage, IProcessor<TMessage>> router,
             ILogger<TMessage>? logger = null,
             IReceiverStrategy? receiverStrategy = null,
             IRetryPolicy? retryPolicy = null,
@@ -85,7 +84,7 @@ namespace QueueProcessor
                         this.logger.LogMessageReceived(this.Name, message);
                     }
 
-                    foreach (IGrouping<IProcessorService<TMessage>, TMessage> group in batch.GroupBy(x => this.router(x), x => x))
+                    foreach (IGrouping<IProcessor<TMessage>, TMessage> group in batch.GroupBy(x => this.router(x), x => x))
                     {
                         group.Key.Enqueue(group);
                     }

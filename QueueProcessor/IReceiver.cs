@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor
 {
-    public interface IReceiverService<TMessage>
+    public interface IReceiver<TMessage>
     {
         void OnClosed(IEnumerable<TMessage> messages);
 

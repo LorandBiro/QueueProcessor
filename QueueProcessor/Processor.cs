@@ -1,4 +1,5 @@
-﻿using System;
+﻿using QueueProcessor.Internal;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -7,23 +8,21 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor
 {
-    public delegate Task MessageProcessor<TMessage>(IReadOnlyList<Job<TMessage>> jobs, CancellationToken cancellationToken);
-
-    public sealed class ProcessorService<TMessage> : IProcessorService<TMessage>
+    public sealed class Processor<TMessage> : IProcessor<TMessage>
     {
         private static readonly Func<Job<TMessage>, Op> OnSuccessDefault = job => Op.Close;
         private static readonly Func<Job<TMessage>, Op> OnFailureDefault = job => Op.InstantRetry;
 
-        private readonly MessageProcessor<TMessage> processor;
+        private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> processor;
         private readonly ILogger<TMessage> logger;
         private readonly Func<Job<TMessage>, Op> onSuccess;
         private readonly Func<Job<TMessage>, Op> onFailure;
         private readonly IRetryPolicy retryPolicy;
         private readonly List<TaskRunner> backgroundProcesses = new List<TaskRunner>();
 
-        public ProcessorService(
+        public Processor(
             string name,
-            MessageProcessor<TMessage> processor,
+            Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> processor,
             ILogger<TMessage>? logger = null,
             int concurrency = 1,
             int maxBatchSize = 0,

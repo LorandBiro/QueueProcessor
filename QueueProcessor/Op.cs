@@ -7,18 +7,18 @@ namespace QueueProcessor
         public static readonly Op Close = new CloseOp();
         public static readonly RetryOp InstantRetry = new RetryOp(TimeSpan.Zero);
 
-        public static Op TransferTo<TMessage>(IProcessorService<TMessage> processor) => new TransferOp<TMessage>(processor);
+        public static Op TransferTo<TMessage>(IProcessor<TMessage> processor) => new TransferOp<TMessage>(processor);
         public static Op Retry(TimeSpan delay) => new RetryOp(delay);
     }
 
     public sealed class TransferOp<TMessage> : Op
     {
-        public TransferOp(IProcessorService<TMessage> processor)
+        public TransferOp(IProcessor<TMessage> processor)
         {
             this.Processor = processor ?? throw new ArgumentNullException(nameof(processor));
         }
 
-        public IProcessorService<TMessage> Processor { get; }
+        public IProcessor<TMessage> Processor { get; }
         public override string ToString() => "Transfer to " + this.Processor.Name;
     }
 

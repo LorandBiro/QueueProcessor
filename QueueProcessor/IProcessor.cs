@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor
 {
-    public interface IProcessorService<TMessage>
+    public interface IProcessor<TMessage>
     {
         string Name { get; }
 

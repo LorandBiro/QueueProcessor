@@ -8,13 +8,13 @@ namespace QueueProcessor
 {
     public sealed class QueueService<TMessage>
     {
-        private readonly IReceiverService<TMessage> receiver;
-        private readonly IReadOnlyList<IProcessorService<TMessage>> processors;
+        private readonly IReceiver<TMessage> receiver;
+        private readonly IReadOnlyList<IProcessor<TMessage>> processors;
 
-        public QueueService(IReceiverService<TMessage> receiver, params IProcessorService<TMessage>[] processors)
-            : this(receiver, (IEnumerable<IProcessorService<TMessage>>)processors) { }
+        public QueueService(IReceiver<TMessage> receiver, params IProcessor<TMessage>[] processors)
+            : this(receiver, (IEnumerable<IProcessor<TMessage>>)processors) { }
 
-        public QueueService(IReceiverService<TMessage> receiver, IEnumerable<IProcessorService<TMessage>> processors)
+        public QueueService(IReceiver<TMessage> receiver, IEnumerable<IProcessor<TMessage>> processors)
         {
             if (processors is null)
             {
@@ -22,7 +22,7 @@ namespace QueueProcessor
             }
 
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
-            this.processors = processors as IReadOnlyList<IProcessorService<TMessage>> ?? processors.ToList();
+            this.processors = processors as IReadOnlyList<IProcessor<TMessage>> ?? processors.ToList();
             if (this.processors.Count == 0)
             {
                 throw new ArgumentException("At least 1 processor must be provided.", nameof(processors));
@@ -31,7 +31,7 @@ namespace QueueProcessor
 
         public void Start()
         {
-            foreach (IProcessorService<TMessage> processor in this.processors)
+            foreach (IProcessor<TMessage> processor in this.processors)
             {
                 processor.Start();
             }
@@ -42,7 +42,7 @@ namespace QueueProcessor
         public async Task StopAsync()
         {
             await this.receiver.StopAsync().ConfigureAwait(false);
-            foreach (IProcessorService<TMessage> processor in this.processors)
+            foreach (IProcessor<TMessage> processor in this.processors)
             {
                 await processor.StopAsync().ConfigureAwait(false);
             }

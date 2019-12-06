@@ -19,26 +19,26 @@ namespace QueueProcessor.Reference
 
         private static QueueService<MySqlMessage> CreateMySqlToSqs(MySqlQueue mySql)
         {
-            ProcessorService<MySqlMessage> handler = null, archiver = null, remover = null;
+            Processor<MySqlMessage> handler = null, archiver = null, remover = null;
 
-            ReceiverService<MySqlMessage> receiver = new ReceiverService<MySqlMessage>(
+            Receiver<MySqlMessage> receiver = new Receiver<MySqlMessage>(
                 "MySqlToSqsReceiver",
                 ct => mySql.ReceiveAsync(100, 60, ct),
                 _ => handler,
                 concurrency: 4);
-            handler = new ProcessorService<MySqlMessage>(
+            handler = new Processor<MySqlMessage>(
                 "MySqlToSqsHandler",
                 (jobs, ct) => mySql.EnqueueAsync(jobs.Select(x => x.Message.Payload), ct),
                 maxBatchSize: 100,
                 onSuccess: x => Op.TransferTo(remover),
                 onFailure: x => x.Message.ReceivedCount < 10 ? Op.Close : Op.TransferTo(archiver));
-            archiver = new ProcessorService<MySqlMessage>(
+            archiver = new Processor<MySqlMessage>(
                 "MySqlToSqsArchiver",
                 (jobs, ct) => mySql.ArchiveAsync(jobs.Select(x => x.Message), ct),
                 concurrency: 8,
                 maxBatchSize: 10,
                 onSuccess: x => Op.TransferTo(remover));
-            remover = new ProcessorService<MySqlMessage>(
+            remover = new Processor<MySqlMessage>(
                 "MySqlToSqsRemover",
                 (jobs, ct) => mySql.RemoveAsync(jobs.Select(x => x.Message), ct),
                 maxBatchSize: 100,

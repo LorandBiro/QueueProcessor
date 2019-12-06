@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor
+namespace QueueProcessor.Internal
 {
     public sealed class TaskRunner : IDisposable
     {
