@@ -11,5 +11,7 @@ namespace QueueProcessor
         Task StopAsync();
 
         void Enqueue(IEnumerable<TMessage> messages);
+
+        event Action<IEnumerable<TMessage>> Closed;
     }
 }

@@ -26,19 +26,19 @@ namespace QueueProcessor.Reference
                 _ => handler,
                 concurrency: 4);
             handler = new ProcessorService<MySqlMessage>(
-                "Handle",
+                "Handler",
                 (items, ct) => mySql.EnqueueAsync(items.Select(x => x.Message.Payload), ct),
                 maxBatchSize: 100,
-                onSuccess: x => x.Next(remover),
-                onFailure: (x, e) => { if (x.Message.ReceivedCount < 10) x.Close(Result.Error(e)); else x.Next(archiver, Result.Error(e)); });
+                onSuccess: x => Op.TransferTo(remover),
+                onFailure: x => x.Message.ReceivedCount < 10 ? Op.Close : Op.TransferTo(archiver));
             archiver = new ProcessorService<MySqlMessage>(
-                "Archive",
+                "Archiver",
                 (items, ct) => mySql.ArchiveAsync(items.Select(x => x.Message), ct),
                 concurrency: 8,
                 maxBatchSize: 10,
-                onSuccess: x => x.Next(remover));
+                onSuccess: x => Op.TransferTo(remover));
             remover = new ProcessorService<MySqlMessage>(
-                "Remove",
+                "Remover",
                 (items, ct) => mySql.RemoveAsync(items.Select(x => x.Message), ct),
                 maxBatchSize: 100,
                 maxBatchDelay: TimeSpan.FromSeconds(10.0));

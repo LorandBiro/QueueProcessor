@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace QueueProcessor
+﻿namespace QueueProcessor
 {
     public sealed class WorkItem<TMessage>
     {
@@ -12,11 +8,8 @@ namespace QueueProcessor
         }
 
         public TMessage Message { get; }
+        public Result Result { get; }
 
         public int ErrorCount { get; private set; }
-
-        public void Next(IProcessorService<TMessage> processor, Result result = default) { }
-        public void Close(Result result = default) { }
-        public void Retry(TimeSpan delay = default, Result result = default) { }
     }
 }

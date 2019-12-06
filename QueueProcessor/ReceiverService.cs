@@ -17,6 +17,7 @@ namespace QueueProcessor
         private readonly IReceiverStrategy receiverStrategy;
         private readonly IRetryPolicy retryPolicy;
         private readonly List<BackgroundProcess> backgroundProcesses = new List<BackgroundProcess>();
+        private readonly ReceiverLimiter limiter;
 
         public ReceiverService(
             MessageReceiver<TMessage> receiver,
@@ -24,7 +25,8 @@ namespace QueueProcessor
             ILogger? logger = null,
             IReceiverStrategy? receiverStrategy = null,
             IRetryPolicy? retryPolicy = null,
-            int concurrency = 1)
+            int concurrency = 1,
+            int inflightMessageLimit = int.MaxValue)
         {
             if (concurrency < 1)
             {
@@ -40,6 +42,18 @@ namespace QueueProcessor
             {
                 this.backgroundProcesses.Add(new BackgroundProcess(this.logger, this.MainAsync));
             }
+
+            this.limiter = new ReceiverLimiter(inflightMessageLimit);
+        }
+
+        public void OnClosed(IEnumerable<TMessage> messages)
+        {
+            if (messages is null)
+            {
+                throw new ArgumentNullException(nameof(messages));
+            }
+
+            this.limiter.OnClosed(messages.Count());
         }
 
         public void Start() => this.backgroundProcesses.ForEach(x => x.Start());
@@ -55,6 +69,7 @@ namespace QueueProcessor
                 TimeSpan normalDelay = this.receiverStrategy.GetDelay(previousBatchSize);
                 TimeSpan errorDelay = this.retryPolicy.GetDelay();
                 await Task.Delay(errorDelay > normalDelay ? errorDelay : normalDelay, cancellationToken).ConfigureAwait(false);
+                await this.limiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
                 try
                 {
