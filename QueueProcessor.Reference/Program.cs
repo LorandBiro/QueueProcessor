@@ -1,20 +1,27 @@
-﻿using QueueProcessor.MySql;
+﻿using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
+using QueueProcessor.MySql;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace QueueProcessor.Reference
 {
     class Program
     {
+        [ThreadStatic]
+        private static Random Random;
+
         public static async Task Main()
         {
-            MySqlQueue mySql = new MySqlQueue(null, "");
+            MySqlQueue mySql = new MySqlQueue(new TelemetryClient(TelemetryConfiguration.Active), "Server=db;Port=3306;Database=queue;Uid=root;Pwd=root;");
             await mySql.InitializeAsync();
 
             QueueService<MySqlMessage> mySqlToSqs = CreateMySqlToSqs(mySql);
 
             mySqlToSqs.Start();
+            await Task.Delay(Timeout.InfiniteTimeSpan);
         }
 
         private static QueueService<MySqlMessage> CreateMySqlToSqs(MySqlQueue mySql)
@@ -23,13 +30,27 @@ namespace QueueProcessor.Reference
 
             Receiver<MySqlMessage> receiver = new Receiver<MySqlMessage>(
                 "MySqlToSqsReceiver",
-                ct => mySql.ReceiveAsync(100, 60, ct),
+                ct => mySql.ReceiveAsync(5, 60, ct),
                 _ => handler,
                 concurrency: 4);
             handler = new Processor<MySqlMessage>(
                 "MySqlToSqsHandler",
-                (jobs, ct) => mySql.EnqueueAsync(jobs.Select(x => x.Message.Payload), ct),
-                maxBatchSize: 100,
+                async (jobs, ct) =>
+                {
+                    await Task.Delay((Random ?? (Random = new Random())).Next(1000));
+                    string newPayload;
+                    string[] parts = jobs[0].Message.Payload.Split('-');
+                    if (parts.Length == 1)
+                    {
+                        newPayload = parts[0] + "-1";
+                    }
+                    else
+                    {
+                        newPayload = parts[0] + "-" + (int.Parse(parts[1]) + 1);
+                    }
+                    await mySql.EnqueueAsync(new[] { newPayload }, ct);
+                },
+                maxBatchSize: 1,
                 onSuccess: x => Op.TransferTo(remover),
                 onFailure: x => x.Message.ReceivedCount < 10 ? Op.Close : Op.TransferTo(archiver));
             archiver = new Processor<MySqlMessage>(

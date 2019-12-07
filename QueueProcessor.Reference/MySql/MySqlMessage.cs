@@ -22,5 +22,7 @@ namespace QueueProcessor.MySql
         public DateTime Timeout { get; }
 
         public int ReceivedCount { get; }
+
+        public override string ToString() => this.Payload;
     }
 }

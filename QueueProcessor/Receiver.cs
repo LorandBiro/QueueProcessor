@@ -79,12 +79,13 @@ namespace QueueProcessor
                 try
                 {
                     IReadOnlyCollection<TMessage> batch = await this.receiver(cancellationToken).ConfigureAwait(false);
-                    foreach (TMessage message in batch)
+                    var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
+                    foreach (var item in messagesWithRoutes)
                     {
-                        this.logger.LogMessageReceived(this.Name, message);
+                        this.logger.LogMessageReceived(this.Name, item.Message, item.Processor);
                     }
 
-                    foreach (IGrouping<IProcessor<TMessage>, TMessage> group in batch.GroupBy(x => this.router(x), x => x))
+                    foreach (IGrouping<IProcessor<TMessage>, TMessage> group in messagesWithRoutes.GroupBy(x => x.Processor, x => x.Message))
                     {
                         group.Key.Enqueue(group);
                     }

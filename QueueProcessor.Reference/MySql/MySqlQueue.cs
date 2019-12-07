@@ -32,10 +32,18 @@ namespace QueueProcessor.MySql
     created_at DATETIME NOT NULL,
     lock_timeout DATETIME NOT NULL,
     lock_handle INT NULL,
-    payload VARCHAR(32768) NOT NULL,
+    payload VARCHAR(8192) NOT NULL,
     lock_count tinyint unsigned not null default 0,
     INDEX queue_lock_handle_index (lock_handle),
     INDEX queue_lock_timeout_index (lock_timeout)
+);
+
+CREATE TABLE IF NOT EXISTS dead_letter
+(
+    id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    created_at DATETIME NOT NULL,
+    died_at DATETIME NOT NULL,
+    payload VARCHAR(8192) NOT NULL
 );";
 
             using MySqlConnection connection = new MySqlConnection(this.connectionString);
@@ -58,7 +66,7 @@ namespace QueueProcessor.MySql
 
         public async Task EnqueueAsync(IEnumerable<string> messages, CancellationToken cancellationToken)
         {
-            string sql = "INSERT INTO outbox (created_at, lock_timeout, payload) VALUES " + string.Join(", ", messages.Select(x => $"(UTC_TIMESTAMP(), UTC_TIMESTAMP(), '{x}')")) + ";";
+            string sql = "INSERT INTO queue (created_at, lock_timeout, payload) VALUES " + string.Join(", ", messages.Select(x => $"(UTC_TIMESTAMP(), UTC_TIMESTAMP(), '{x}')")) + ";";
 
             using MySqlConnection connection = new MySqlConnection(this.connectionString);
             using IOperationHolder<DependencyTelemetry> operation = this.telemetryClient.StartOperation(new DependencyTelemetry("MySQL", connection.DataSource, "Archive", sql));
@@ -115,8 +123,8 @@ namespace QueueProcessor.MySql
 
         public async Task ArchiveAsync(IEnumerable<MySqlMessage> messages, CancellationToken cancellationToken)
         {
-            string sql = $@"INSERT IGNORE INTO dead_letter (id, created_at, died_at, type, payload)
-    SELECT id, created_at, UTC_TIMESTAMP(), type, payload
+            string sql = $@"INSERT IGNORE INTO dead_letter (id, created_at, died_at, payload)
+    SELECT id, created_at, UTC_TIMESTAMP(), payload
     FROM queue
     WHERE id in ({string.Join(", ", messages.Select(x => x.Id))});";
 

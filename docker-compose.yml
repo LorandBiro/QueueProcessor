@@ -1,0 +1,17 @@
+version: '3.4'
+
+services:
+  queueprocessor.reference:
+    image: ${DOCKER_REGISTRY-}queueprocessorreference
+    build:
+      context: .
+      dockerfile: QueueProcessor.Reference/Dockerfile
+
+  db:
+    image: mysql:8.0.17
+    restart: always
+    environment:
+      MYSQL_DATABASE: queue
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - '3306:3306'
