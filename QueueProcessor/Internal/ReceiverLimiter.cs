@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,42 +9,38 @@ namespace QueueProcessor.Internal
     {
         private readonly object locker = new object();
 
-        private readonly int maxCount;
-        private TaskCompletionSource<object?>? taskCompletionSource;
-        private CancellationTokenRegistration cancellationTokenRegistration;
+        private readonly int limit;
+        private List<Wait> waits = new List<Wait>();
 
-        public ReceiverLimiter(int maxCount)
+        public ReceiverLimiter(int limit)
         {
-            if (maxCount <= 1)
+            if (limit < 1)
             {
-                throw new ArgumentOutOfRangeException(nameof(maxCount));
+                throw new ArgumentOutOfRangeException(nameof(limit), limit, "The limit must be at least 1.");
             }
 
-            this.maxCount = maxCount;
+            this.limit = limit;
         }
 
         public int Count { get; private set; }
 
         public Task WaitAsync(CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled(cancellationToken);
+            }
+
             lock (this.locker)
             {
-                if (this.taskCompletionSource != null)
-                {
-                    throw new InvalidOperationException();
-                }
-
-                if (this.Count < this.maxCount)
+                if (this.Count < this.limit)
                 {
                     return Task.CompletedTask;
                 }
 
-                TaskCompletionSource<object?> tcs = new TaskCompletionSource<object?>();
-                this.cancellationTokenRegistration = cancellationToken.Register(() => tcs.TrySetCanceled());
-
-                this.taskCompletionSource = tcs;
-                return tcs.Task;
+                Wait wait = new Wait(cancellationToken);
+                this.waits.Add(wait);
+                return wait.Task;
             }
         }
 
@@ -55,27 +52,56 @@ namespace QueueProcessor.Internal
             }
         }
 
-        public int OnClosed(int count)
+        public void OnClosed(int count)
         {
-            TaskCompletionSource<object?>? tcs = null;
-            int newCount;
+            List<Wait>? waitsToComplete = null;
             lock (this.locker)
             {
-                newCount = this.Count -= count;
-                if (this.Count < this.maxCount)
+                this.Count -= count;
+                if (this.Count < this.limit && this.waits.Count > 0)
                 {
-                    tcs = this.taskCompletionSource;
-                    this.taskCompletionSource = null;
+                    waitsToComplete = this.waits;
+                    this.waits = new List<Wait>();
                 }
             }
 
-            if (tcs != null)
+            if (waitsToComplete != null)
             {
-                this.cancellationTokenRegistration.Dispose();
-                tcs.TrySetResult(null);
+                waitsToComplete.ForEach(x => x.Complete());
+            }
+        }
+
+        private class Wait
+        {
+            private readonly TaskCompletionSource<object?> taskCompletionSource;
+            private readonly CancellationTokenRegistration cancellationTokenRegistration;
+
+            public Wait(CancellationToken cancellationToken)
+            {
+                this.taskCompletionSource = new TaskCompletionSource<object?>();
+                if (cancellationToken.CanBeCanceled)
+                {
+                    this.cancellationTokenRegistration = cancellationToken.Register(this.Cancel);
+                }
             }
 
-            return newCount;
+            public Task Task => this.taskCompletionSource.Task;
+
+            public void Complete()
+            {
+                this.cancellationTokenRegistration.Dispose();
+
+                // We use Try here because a race condition can happen between cancelling and completing the task, but we don't really care which wins.
+                this.taskCompletionSource.TrySetResult(null);
+            }
+
+            private void Cancel()
+            {
+                this.cancellationTokenRegistration.Dispose();
+
+                // We use Try here because a race condition can happen between cancelling and completing the task, but we don't really care which wins.
+                this.taskCompletionSource.TrySetCanceled();
+            }
         }
     }
 }
