@@ -37,7 +37,7 @@ namespace QueueProcessor
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
-            this.receiverStrategy = receiverStrategy ?? new ConstantRateRandomReceiverStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
+            this.receiverStrategy = receiverStrategy ?? new FixedIntervalReceiverStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
             this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
             for (int i = 0; i < concurrency; i++)
             {

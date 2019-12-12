@@ -5,13 +5,13 @@ using Xunit;
 
 namespace QueueProcessor
 {
-    public class ConstantRateRandomReceiverStrategyTest
+    public class FixedIntervalReceiverStrategyTest
     {
         [Fact]
         public void GetDelay_ReturnsZero_WhenBatchSizeReachesLimit()
         {
             // Arrange
-            ConstantRateRandomReceiverStrategy strategy = new ConstantRateRandomReceiverStrategy(Substitute.For<IClock>(), TimeSpan.FromSeconds(1.0), 10);
+            FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(Substitute.For<IClock>(), TimeSpan.FromSeconds(1.0), 10);
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(10);
@@ -27,7 +27,7 @@ namespace QueueProcessor
             IClock clock = Substitute.For<IClock>();
             clock.GetCurrentInstant().Returns(start);
 
-            ConstantRateRandomReceiverStrategy strategy = new ConstantRateRandomReceiverStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
+            FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
 
             // Act
             DateTime end = start + TimeSpan.FromSeconds(1000.0);
@@ -59,7 +59,7 @@ namespace QueueProcessor
             IClock clock = Substitute.For<IClock>();
             clock.GetCurrentInstant().Returns(now);
 
-            ConstantRateRandomReceiverStrategy strategy = new ConstantRateRandomReceiverStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
+            FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
 
             // Right now the interval is between 0s and 1s. We let the time pass until 1.5s.
             now += TimeSpan.FromSeconds(1.5);

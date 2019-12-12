@@ -3,14 +3,14 @@ using System;
 
 namespace QueueProcessor
 {
-    public sealed class ConstantRateRandomReceiverStrategy : IReceiverStrategy
+    public sealed class FixedIntervalReceiverStrategy : IReceiverStrategy
     {
         private readonly IClock clock;
         private readonly TimeSpan interval;
         private readonly int repeatLimit;
         private DateTime intervalStart;
 
-        public ConstantRateRandomReceiverStrategy(IClock clock, TimeSpan interval, int repeatLimit = int.MaxValue)
+        public FixedIntervalReceiverStrategy(IClock clock, TimeSpan interval, int repeatLimit = int.MaxValue)
         {
             if (interval <= TimeSpan.Zero)
             {
