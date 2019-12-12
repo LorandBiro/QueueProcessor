@@ -3,6 +3,7 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using MySql.Data.MySqlClient;
+using QueueProcessor.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +14,6 @@ namespace QueueProcessor.MySql
 {
     public sealed class MySqlQueue
     {
-        private static readonly Random Random = new Random();
-
         private readonly TelemetryClient telemetryClient;
         private readonly string connectionString;
 
@@ -88,7 +87,7 @@ CREATE TABLE IF NOT EXISTS dead_letter
 
         public async Task<IReadOnlyCollection<MySqlMessage>> ReceiveAsync(int limit, int lockTimeoutInSeconds, CancellationToken cancellationToken)
         {
-            int lockHandle = Random.Next();
+            int lockHandle = ThreadLocalRandom.Next();
             string sql = $@"
     UPDATE queue
     SET lock_timeout = DATE_ADD(UTC_TIMESTAMP(), INTERVAL {lockTimeoutInSeconds} SECOND),

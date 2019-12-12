@@ -1,5 +1,6 @@
 ﻿using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
+using QueueProcessor.Internal;
 using QueueProcessor.MySql;
 using System;
 using System.Linq;
@@ -10,9 +11,6 @@ namespace QueueProcessor.Reference
 {
     class Program
     {
-        [ThreadStatic]
-        private static Random Random;
-
         public static async Task Main()
         {
             MySqlQueue mySql = new MySqlQueue(new TelemetryClient(TelemetryConfiguration.Active), "Server=db;Port=3306;Database=queue;Uid=root;Pwd=root;");
@@ -37,7 +35,7 @@ namespace QueueProcessor.Reference
                 "MySqlToSqsHandler",
                 async (jobs, ct) =>
                 {
-                    await Task.Delay((Random ?? (Random = new Random())).Next(1000));
+                    await Task.Delay(ThreadLocalRandom.Next(1000));
                     string newPayload;
                     string[] parts = jobs[0].Message.Payload.Split('-');
                     if (parts.Length == 1)

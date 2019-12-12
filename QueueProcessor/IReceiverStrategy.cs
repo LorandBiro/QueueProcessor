@@ -1,4 +1,5 @@
-﻿using System;
+﻿using QueueProcessor.Internal;
+using System;
 
 namespace QueueProcessor
 {
@@ -14,8 +15,6 @@ namespace QueueProcessor
 
     public sealed class UniformRandomReceiverStrategy : IReceiverStrategy
     {
-        private static readonly Random Random = new Random();
-
         private readonly TimeSpan minDelay;
         private readonly int repeatLimit;
         private readonly TimeSpan range;
@@ -49,17 +48,12 @@ namespace QueueProcessor
                 return TimeSpan.Zero;
             }
 
-            lock (Random)
-            {
-                return this.minDelay + this.range * Random.NextDouble();
-            }
+            return this.minDelay + this.range * ThreadLocalRandom.NextDouble();
         }
     }
 
     public sealed class ConstantRateRandomReceiverStrategy : IReceiverStrategy
     {
-        private static readonly Random Random = new Random();
-
         private readonly TimeSpan interval;
         private readonly int repeatLimit;
         private DateTime intervalStart;
@@ -83,31 +77,28 @@ namespace QueueProcessor
 
         public TimeSpan GetDelay(int batchSize)
         {
-            lock (Random)
+            DateTime now = DateTime.UtcNow;
+
+            TimeSpan delay;
+            if (batchSize >= this.repeatLimit)
             {
-                DateTime now = DateTime.UtcNow;
-
-                TimeSpan delay;
-                if (batchSize >= this.repeatLimit)
-                {
-                    delay = TimeSpan.Zero;
-                }
-                else
-                {
-                    DateTime intervalEnd = this.intervalStart + this.interval;
-                    TimeSpan minDelay = this.intervalStart > now ? this.intervalStart - now : TimeSpan.Zero;
-                    TimeSpan maxDelay = intervalEnd > now ? intervalEnd - now : TimeSpan.Zero;
-                    delay = minDelay + (maxDelay - minDelay) * Random.NextDouble();
-                }
-
-                DateTime scheduledPoll = now + delay;
-                while (this.intervalStart < scheduledPoll)
-                {
-                    this.intervalStart += this.interval;
-                }
-
-                return delay;
+                delay = TimeSpan.Zero;
             }
+            else
+            {
+                DateTime intervalEnd = this.intervalStart + this.interval;
+                TimeSpan minDelay = this.intervalStart > now ? this.intervalStart - now : TimeSpan.Zero;
+                TimeSpan maxDelay = intervalEnd > now ? intervalEnd - now : TimeSpan.Zero;
+                delay = minDelay + (maxDelay - minDelay) * ThreadLocalRandom.NextDouble();
+            }
+
+            DateTime scheduledPoll = now + delay;
+            while (this.intervalStart < scheduledPoll)
+            {
+                this.intervalStart += this.interval;
+            }
+
+            return delay;
         }
     }
 }

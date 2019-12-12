@@ -1,11 +1,10 @@
-﻿using System;
+﻿using QueueProcessor.Internal;
+using System;
 
 namespace QueueProcessor
 {
     public class DefaultRetryPolicy : IRetryPolicy
     {
-        private static readonly Random Random = new Random();
-
         private readonly int maxRetryExponent;
 
         public DefaultRetryPolicy(int maxRetryExponent)
@@ -41,11 +40,7 @@ namespace QueueProcessor
                 return TimeSpan.Zero;
             }
 
-            lock (Random)
-            {
-                // Random isn't thread safe, concurrent calls can corrupt it's internal state, so we lock here.
-                return TimeSpan.FromSeconds(1 << (this.ErrorCount - 1)) * Random.NextDouble();
-            }
+            return TimeSpan.FromSeconds(1 << (this.ErrorCount - 1)) * ThreadLocalRandom.NextDouble();
         }
     }
 }
