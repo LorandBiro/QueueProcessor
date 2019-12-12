@@ -4,6 +4,6 @@ namespace QueueProcessor.Internal
 {
     public sealed class Clock : IClock
     {
-        public DateTime GetCurrentInstant() => DateTime.UtcNow;
+        public DateTime Now => DateTime.UtcNow;
     }
 }

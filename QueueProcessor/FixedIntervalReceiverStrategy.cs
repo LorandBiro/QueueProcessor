@@ -25,12 +25,12 @@ namespace QueueProcessor
             this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
             this.interval = interval;
             this.repeatLimit = repeatLimit;
-            this.intervalStart = this.clock.GetCurrentInstant();
+            this.intervalStart = this.clock.Now;
         }
 
         public TimeSpan GetDelay(int batchSize)
         {
-            DateTime now = this.clock.GetCurrentInstant();
+            DateTime now = this.clock.Now;
 
             TimeSpan delay;
             if (batchSize >= this.repeatLimit)

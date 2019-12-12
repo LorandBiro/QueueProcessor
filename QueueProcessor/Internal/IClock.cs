@@ -4,6 +4,6 @@ namespace QueueProcessor.Internal
 {
     public interface IClock
     {
-        DateTime GetCurrentInstant();
+        DateTime Now { get; }
     }
 }

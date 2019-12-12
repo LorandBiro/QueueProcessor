@@ -1,5 +1,4 @@
-﻿using NSubstitute;
-using QueueProcessor.Internal;
+﻿using QueueProcessor.Mocks;
 using System;
 using Xunit;
 
@@ -11,7 +10,7 @@ namespace QueueProcessor
         public void GetDelay_ReturnsZero_WhenBatchSizeReachesLimit()
         {
             // Arrange
-            FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(Substitute.For<IClock>(), TimeSpan.FromSeconds(1.0), 10);
+            FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(new ClockStub(), TimeSpan.FromSeconds(1.0), 10);
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(10);
@@ -24,9 +23,7 @@ namespace QueueProcessor
             // Arrange
             DateTime start = new DateTime(0, DateTimeKind.Utc);
 
-            IClock clock = Substitute.For<IClock>();
-            clock.GetCurrentInstant().Returns(start);
-
+            ClockStub clock = new ClockStub { Now = start };
             FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
 
             // Act
@@ -35,7 +32,7 @@ namespace QueueProcessor
             int count = 0;
             while (true)
             {
-                clock.GetCurrentInstant().Returns(now);
+                clock.Now = now;
                 TimeSpan delay = strategy.GetDelay(0);
                 now += delay;
                 if (now > end)
@@ -56,14 +53,12 @@ namespace QueueProcessor
             // Arrange
             DateTime now = new DateTime(0, DateTimeKind.Utc);
 
-            IClock clock = Substitute.For<IClock>();
-            clock.GetCurrentInstant().Returns(now);
-
+            ClockStub clock = new ClockStub { Now = now };
             FixedIntervalReceiverStrategy strategy = new FixedIntervalReceiverStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
 
             // Right now the interval is between 0s and 1s. We let the time pass until 1.5s.
             now += TimeSpan.FromSeconds(1.5);
-            clock.GetCurrentInstant().Returns(now);
+            clock.Now = now;
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(0);
