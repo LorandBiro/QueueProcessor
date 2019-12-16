@@ -3,13 +3,13 @@ using System;
 
 namespace QueueProcessor
 {
-    public sealed class UniformRandomReceiverStrategy : IReceiverStrategy
+    public sealed class RandomPollingStrategy : IPollingStrategy
     {
         private readonly TimeSpan minDelay;
         private readonly int repeatLimit;
         private readonly TimeSpan range;
 
-        public UniformRandomReceiverStrategy(TimeSpan minDelay, TimeSpan maxDelay, int repeatLimit = int.MaxValue)
+        public RandomPollingStrategy(TimeSpan minDelay, TimeSpan maxDelay, int repeatLimit = int.MaxValue)
         {
             if (minDelay < TimeSpan.Zero)
             {

@@ -3,13 +3,13 @@ using Xunit;
 
 namespace QueueProcessor
 {
-    public class ContinuousReceiverStrategyTest
+    public class LongPollingStrategyTest
     {
         [Fact]
         public void GetDelay_ReturnsZero()
         {
             // Arrange
-            ContinuousReceiverStrategy strategy = new ContinuousReceiverStrategy();
+            LongPollingStrategy strategy = new LongPollingStrategy();
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(0);

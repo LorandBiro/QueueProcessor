@@ -2,7 +2,7 @@
 
 namespace QueueProcessor
 {
-    public interface IReceiverStrategy
+    public interface IPollingStrategy
     {
         TimeSpan GetDelay(int batchSize);
     }

@@ -13,7 +13,7 @@ namespace QueueProcessor
         private readonly Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> receiver;
         private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly ILogger<TMessage> logger;
-        private readonly IReceiverStrategy receiverStrategy;
+        private readonly IPollingStrategy pollingStrategy;
         private readonly ICircuitBreaker circuitBreaker;
         private readonly ConcurrentTaskRunner runner;
         private readonly ReceiverLimiter limiter;
@@ -23,7 +23,7 @@ namespace QueueProcessor
             Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> receiver,
             Func<TMessage, IProcessor<TMessage>> router,
             ILogger<TMessage>? logger = null,
-            IReceiverStrategy? receiverStrategy = null,
+            IPollingStrategy? pollingStrategy = null,
             ICircuitBreaker? circuitBreaker = null,
             int concurrency = 1,
             int inflightMessageLimit = int.MaxValue)
@@ -32,7 +32,7 @@ namespace QueueProcessor
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
-            this.receiverStrategy = receiverStrategy ?? new FixedIntervalReceiverStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
+            this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
             this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
@@ -61,7 +61,7 @@ namespace QueueProcessor
             int previousBatchSize = 0;
             while (true)
             {
-                TimeSpan normalDelay = this.receiverStrategy.GetDelay(previousBatchSize);
+                TimeSpan normalDelay = this.pollingStrategy.GetDelay(previousBatchSize);
                 TimeSpan errorDelay = this.circuitBreaker.GetDelay();
                 await Task.Delay(errorDelay > normalDelay ? errorDelay : normalDelay, cancellationToken).ConfigureAwait(false);
                 await this.limiter.WaitAsync(cancellationToken).ConfigureAwait(false);

@@ -4,14 +4,14 @@ using System.Threading;
 
 namespace QueueProcessor
 {
-    public sealed class FixedIntervalReceiverStrategy : IReceiverStrategy
+    public sealed class IntervalPollingStrategy : IPollingStrategy
     {
         private readonly IClock clock;
         private readonly long interval;
         private readonly int repeatLimit;
         private long intervalStart;
 
-        public FixedIntervalReceiverStrategy(IClock clock, TimeSpan interval, int repeatLimit = int.MaxValue)
+        public IntervalPollingStrategy(IClock clock, TimeSpan interval, int repeatLimit = int.MaxValue)
         {
             if (interval <= TimeSpan.Zero)
             {

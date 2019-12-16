@@ -2,7 +2,7 @@
 
 namespace QueueProcessor
 {
-    public sealed class ContinuousReceiverStrategy : IReceiverStrategy
+    public sealed class LongPollingStrategy : IPollingStrategy
     {
         public TimeSpan GetDelay(int batchSize) => TimeSpan.Zero;
     }

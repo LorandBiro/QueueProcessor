@@ -3,7 +3,7 @@ using Xunit;
 
 namespace QueueProcessor
 {
-    public class UniformRandomReceiverStrategyTest
+    public class RandomPollingStrategyTest
     {
         [Fact]
         public void GetDelay_AlwaysReturnsBetweenMinAndMax()
@@ -11,7 +11,7 @@ namespace QueueProcessor
             // Arrange
             TimeSpan minDelay = TimeSpan.FromSeconds(1.0);
             TimeSpan maxDelay = TimeSpan.FromSeconds(2.0);
-            UniformRandomReceiverStrategy strategy = new UniformRandomReceiverStrategy(minDelay, maxDelay);
+            RandomPollingStrategy strategy = new RandomPollingStrategy(minDelay, maxDelay);
 
             for (int i = 0; i < 1000; i++)
             {
@@ -25,7 +25,7 @@ namespace QueueProcessor
         public void GetDelay_ReturnsZeroIfBatchSizeReachesLimit()
         {
             // Arrange
-            UniformRandomReceiverStrategy strategy = new UniformRandomReceiverStrategy(TimeSpan.FromSeconds(1.0), TimeSpan.FromSeconds(2.0), 10);
+            RandomPollingStrategy strategy = new RandomPollingStrategy(TimeSpan.FromSeconds(1.0), TimeSpan.FromSeconds(2.0), 10);
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(10);
