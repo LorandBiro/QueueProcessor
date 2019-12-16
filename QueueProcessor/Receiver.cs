@@ -15,7 +15,7 @@ namespace QueueProcessor
         private readonly ILogger<TMessage> logger;
         private readonly IReceiverStrategy receiverStrategy;
         private readonly IRetryPolicy retryPolicy;
-        private readonly List<TaskRunner> backgroundProcesses = new List<TaskRunner>();
+        private readonly ConcurrentTaskRunner runner;
         private readonly ReceiverLimiter limiter;
 
         public Receiver(
@@ -28,24 +28,14 @@ namespace QueueProcessor
             int concurrency = 1,
             int inflightMessageLimit = int.MaxValue)
         {
-            if (concurrency < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(concurrency), concurrency, "Concurrency must be at least 1.");
-            }
-
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
             this.receiverStrategy = receiverStrategy ?? new FixedIntervalReceiverStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
             this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
-            for (int i = 0; i < concurrency; i++)
-            {
-                TaskRunner runner = new TaskRunner(this.MainAsync);
-                runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
-                this.backgroundProcesses.Add(runner);
-            }
-
+            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
+            this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
         }
 
@@ -61,9 +51,9 @@ namespace QueueProcessor
             this.limiter.OnClosed(messages.Count());
         }
 
-        public void Start() => this.backgroundProcesses.ForEach(x => x.Start());
+        public void Start() => this.runner.Start();
 
-        public Task StopAsync() => Task.WhenAll(this.backgroundProcesses.Select(x => x.StopAsync()));
+        public Task StopAsync() => this.runner.StopAsync();
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)

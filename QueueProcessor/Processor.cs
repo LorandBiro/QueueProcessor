@@ -19,7 +19,7 @@ namespace QueueProcessor
         private readonly Func<Job<TMessage>, Op> onSuccess;
         private readonly Func<Job<TMessage>, Op> onFailure;
         private readonly IRetryPolicy retryPolicy;
-        private readonly List<TaskRunner> runners = new List<TaskRunner>();
+        private readonly ConcurrentTaskRunner runner;
         private readonly BatchingQueue<Job<TMessage>> queue;
 
         public Processor(
@@ -33,21 +33,11 @@ namespace QueueProcessor
             Func<Job<TMessage>, Op>? onFailure = null,
             IRetryPolicy? retryPolicy = null)
         {
-            if (concurrency < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(concurrency), concurrency, "Concurrency must be at least 1.");
-            }
-
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.processor = processor ?? throw new ArgumentNullException(nameof(processor));
             this.logger = logger ?? new DebugLogger<TMessage>();
-            for (int i = 0; i < concurrency; i++)
-            {
-                TaskRunner runner = new TaskRunner(this.MainAsync);
-                runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
-                this.runners.Add(runner);
-            }
-
+            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
+            this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
             this.maxBatchSize = maxBatchSize;
             this.queue = new BatchingQueue<Job<TMessage>>();
             this.onSuccess = onSuccess ?? OnSuccessDefault;
@@ -61,9 +51,9 @@ namespace QueueProcessor
 
         public void Enqueue(IEnumerable<TMessage> messages) => this.queue.Enqueue(messages.Select(x => new Job<TMessage>(x)));
 
-        public void Start() => this.runners.ForEach(x => x.Start());
+        public void Start() => this.runner.Start();
 
-        public Task StopAsync() => Task.WhenAll(this.runners.Select(x => x.StopAsync()));
+        public Task StopAsync() => this.runner.StopAsync();
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)
