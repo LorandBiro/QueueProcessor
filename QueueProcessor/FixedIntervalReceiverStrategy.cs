@@ -1,14 +1,15 @@
 ﻿using QueueProcessor.Internal;
 using System;
+using System.Threading;
 
 namespace QueueProcessor
 {
     public sealed class FixedIntervalReceiverStrategy : IReceiverStrategy
     {
         private readonly IClock clock;
-        private readonly TimeSpan interval;
+        private readonly long interval;
         private readonly int repeatLimit;
-        private DateTime intervalStart;
+        private long intervalStart;
 
         public FixedIntervalReceiverStrategy(IClock clock, TimeSpan interval, int repeatLimit = int.MaxValue)
         {
@@ -23,35 +24,38 @@ namespace QueueProcessor
             }
 
             this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
-            this.interval = interval;
+            this.interval = interval.Ticks;
             this.repeatLimit = repeatLimit;
-            this.intervalStart = this.clock.Now;
+            this.intervalStart = this.clock.Now.Ticks;
         }
 
         public TimeSpan GetDelay(int batchSize)
         {
-            DateTime now = this.clock.Now;
+            long now = this.clock.Now.Ticks;
+            long start = this.intervalStart;
 
-            TimeSpan delay;
+            long delay;
             if (batchSize >= this.repeatLimit)
             {
-                delay = TimeSpan.Zero;
+                delay = 0;
             }
             else
             {
-                DateTime intervalEnd = this.intervalStart + this.interval;
-                TimeSpan minDelay = this.intervalStart > now ? this.intervalStart - now : TimeSpan.Zero;
-                TimeSpan maxDelay = intervalEnd > now ? intervalEnd - now : TimeSpan.Zero;
-                delay = minDelay + (maxDelay - minDelay) * ThreadLocalRandom.NextDouble();
+                long end = start + this.interval;
+                long minDelay = start > now ? start - now : 0;
+                long maxDelay = end > now ? end - now : 0;
+                delay = minDelay + (long)((maxDelay - minDelay) * ThreadLocalRandom.NextDouble());
             }
 
-            DateTime scheduledPoll = now + delay;
-            while (this.intervalStart < scheduledPoll)
+            long scheduledPoll = now + delay;
+            while (start < scheduledPoll)
             {
-                this.intervalStart += this.interval;
+                long end = start + this.interval;
+                long originalStart = Interlocked.CompareExchange(ref this.intervalStart, end, start);
+                start = originalStart == start ? end : originalStart;
             }
 
-            return delay;
+            return new TimeSpan(delay);
         }
     }
 }
