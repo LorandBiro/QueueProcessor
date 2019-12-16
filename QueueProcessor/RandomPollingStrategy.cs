@@ -9,6 +9,12 @@ namespace QueueProcessor
         private readonly int repeatLimit;
         private readonly TimeSpan range;
 
+        public RandomPollingStrategy(TimeSpan maxDelay)
+            : this(TimeSpan.Zero, maxDelay, int.MaxValue) { }
+
+        public RandomPollingStrategy(TimeSpan minDelay, TimeSpan maxDelay)
+            : this(minDelay, maxDelay, int.MaxValue) { }
+
         public RandomPollingStrategy(TimeSpan minDelay, TimeSpan maxDelay, int repeatLimit = int.MaxValue)
         {
             if (minDelay < TimeSpan.Zero)

@@ -32,7 +32,7 @@ namespace QueueProcessor
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
-            this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
+            this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(TimeSpan.FromSeconds(5.0));
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
             this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);

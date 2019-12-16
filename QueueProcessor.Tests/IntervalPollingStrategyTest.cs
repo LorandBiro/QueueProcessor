@@ -10,7 +10,7 @@ namespace QueueProcessor
         public void GetDelay_ReturnsZero_WhenBatchSizeReachesLimit()
         {
             // Arrange
-            IntervalPollingStrategy strategy = new IntervalPollingStrategy(new ClockStub(), TimeSpan.FromSeconds(1.0), 10);
+            IntervalPollingStrategy strategy = new IntervalPollingStrategy(TimeSpan.FromSeconds(1.0), 10, new ClockStub());
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(10);
@@ -24,7 +24,7 @@ namespace QueueProcessor
             DateTime start = new DateTime(0, DateTimeKind.Utc);
 
             ClockStub clock = new ClockStub { Now = start };
-            IntervalPollingStrategy strategy = new IntervalPollingStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
+            IntervalPollingStrategy strategy = new IntervalPollingStrategy(TimeSpan.FromSeconds(1.0), 10, clock);
 
             // Act
             DateTime end = start + TimeSpan.FromSeconds(1000.0);
@@ -54,7 +54,7 @@ namespace QueueProcessor
             DateTime now = new DateTime(0, DateTimeKind.Utc);
 
             ClockStub clock = new ClockStub { Now = now };
-            IntervalPollingStrategy strategy = new IntervalPollingStrategy(clock, TimeSpan.FromSeconds(1.0), 10);
+            IntervalPollingStrategy strategy = new IntervalPollingStrategy(TimeSpan.FromSeconds(1.0), 10, clock);
 
             // Right now the interval is between 0s and 1s. We let the time pass until 1.5s.
             now += TimeSpan.FromSeconds(1.5);

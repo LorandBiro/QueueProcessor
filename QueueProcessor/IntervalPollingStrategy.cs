@@ -11,7 +11,13 @@ namespace QueueProcessor
         private readonly int repeatLimit;
         private long intervalStart;
 
-        public IntervalPollingStrategy(IClock clock, TimeSpan interval, int repeatLimit = int.MaxValue)
+        public IntervalPollingStrategy(TimeSpan interval)
+            : this(interval, int.MaxValue) { }
+
+        public IntervalPollingStrategy(TimeSpan interval, int repeatLimit)
+            : this(interval, repeatLimit, new Clock()) { }
+
+        public IntervalPollingStrategy(TimeSpan interval, int repeatLimit, IClock clock)
         {
             if (interval <= TimeSpan.Zero)
             {
