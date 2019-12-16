@@ -2,7 +2,7 @@
 
 namespace QueueProcessor
 {
-    public interface IRetryPolicy
+    public interface ICircuitBreaker
     {
         int ErrorCount { get; }
 

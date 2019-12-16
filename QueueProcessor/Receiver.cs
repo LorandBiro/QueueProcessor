@@ -14,7 +14,7 @@ namespace QueueProcessor
         private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly ILogger<TMessage> logger;
         private readonly IReceiverStrategy receiverStrategy;
-        private readonly IRetryPolicy retryPolicy;
+        private readonly ICircuitBreaker circuitBreaker;
         private readonly ConcurrentTaskRunner runner;
         private readonly ReceiverLimiter limiter;
 
@@ -24,7 +24,7 @@ namespace QueueProcessor
             Func<TMessage, IProcessor<TMessage>> router,
             ILogger<TMessage>? logger = null,
             IReceiverStrategy? receiverStrategy = null,
-            IRetryPolicy? retryPolicy = null,
+            ICircuitBreaker? circuitBreaker = null,
             int concurrency = 1,
             int inflightMessageLimit = int.MaxValue)
         {
@@ -33,7 +33,7 @@ namespace QueueProcessor
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
             this.receiverStrategy = receiverStrategy ?? new FixedIntervalReceiverStrategy(new Clock(), TimeSpan.FromSeconds(5.0));
-            this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
+            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
             this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
@@ -62,7 +62,7 @@ namespace QueueProcessor
             while (true)
             {
                 TimeSpan normalDelay = this.receiverStrategy.GetDelay(previousBatchSize);
-                TimeSpan errorDelay = this.retryPolicy.GetDelay();
+                TimeSpan errorDelay = this.circuitBreaker.GetDelay();
                 await Task.Delay(errorDelay > normalDelay ? errorDelay : normalDelay, cancellationToken).ConfigureAwait(false);
                 await this.limiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -80,7 +80,7 @@ namespace QueueProcessor
                         group.Key.Enqueue(group);
                     }
 
-                    this.retryPolicy.OnSuccess();
+                    this.circuitBreaker.OnSuccess();
                     previousBatchSize = batch.Count;
                 }
                 catch (Exception exception)
@@ -90,7 +90,7 @@ namespace QueueProcessor
                         throw;
                     }
 
-                    this.retryPolicy.OnFailure();
+                    this.circuitBreaker.OnFailure();
                 }
             }
         }

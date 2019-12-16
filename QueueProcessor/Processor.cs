@@ -18,7 +18,7 @@ namespace QueueProcessor
         private readonly int maxBatchSize;
         private readonly Func<Job<TMessage>, Op> onSuccess;
         private readonly Func<Job<TMessage>, Op> onFailure;
-        private readonly IRetryPolicy retryPolicy;
+        private readonly ICircuitBreaker circuitBreaker;
         private readonly ConcurrentTaskRunner runner;
         private readonly BatchingQueue<Job<TMessage>> queue;
 
@@ -31,7 +31,7 @@ namespace QueueProcessor
             TimeSpan maxBatchDelay = default,
             Func<Job<TMessage>, Op>? onSuccess = null,
             Func<Job<TMessage>, Op>? onFailure = null,
-            IRetryPolicy? retryPolicy = null)
+            ICircuitBreaker? circuitBreaker = null)
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.processor = processor ?? throw new ArgumentNullException(nameof(processor));
@@ -42,7 +42,7 @@ namespace QueueProcessor
             this.queue = new BatchingQueue<Job<TMessage>>();
             this.onSuccess = onSuccess ?? OnSuccessDefault;
             this.onFailure = onFailure ?? OnFailureDefault;
-            this.retryPolicy = retryPolicy ?? new DefaultRetryPolicy(5);
+            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
         }
 
         public string Name { get; }
@@ -60,14 +60,14 @@ namespace QueueProcessor
         {
             while (true)
             {
-                await Task.Delay(this.retryPolicy.GetDelay(), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(this.circuitBreaker.GetDelay(), cancellationToken).ConfigureAwait(false);
                 IReadOnlyList<Job<TMessage>> jobs = await this.queue.DequeueAsync(this.maxBatchSize, cancellationToken).ConfigureAwait(false);
                 try
                 {
                     await this.processor(jobs, cancellationToken).ConfigureAwait(false);
                     HandleResults(jobs, this.onSuccess);
 
-                    this.retryPolicy.OnSuccess();
+                    this.circuitBreaker.OnSuccess();
                 }
                 catch (Exception exception)
                 {
@@ -82,7 +82,7 @@ namespace QueueProcessor
                     }
 
                     HandleResults(jobs, this.onFailure);
-                    this.retryPolicy.OnFailure();
+                    this.circuitBreaker.OnFailure();
                 }
             }
         }

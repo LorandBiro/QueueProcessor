@@ -3,11 +3,11 @@ using System;
 
 namespace QueueProcessor
 {
-    public class DefaultRetryPolicy : IRetryPolicy
+    public class CircuitBreaker : ICircuitBreaker
     {
         private readonly int maxRetryExponent;
 
-        public DefaultRetryPolicy(int maxRetryExponent)
+        public CircuitBreaker(int maxRetryExponent)
         {
             this.maxRetryExponent = maxRetryExponent;
         }
