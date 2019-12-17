@@ -1,9 +1,8 @@
-using QueueProcessor.Internal;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace QueueProcessor
+namespace QueueProcessor.Internal
 {
     public class ReceiverLimiterTest
     {

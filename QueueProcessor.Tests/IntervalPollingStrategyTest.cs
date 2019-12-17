@@ -21,21 +21,17 @@ namespace QueueProcessor
         public void GetDelay_IntervalsArePredictable()
         {
             // Arrange
-            DateTime start = new DateTime(0, DateTimeKind.Utc);
-
-            ClockStub clock = new ClockStub { Now = start };
+            ClockStub clock = new ClockStub();
             IntervalPollingStrategy strategy = new IntervalPollingStrategy(TimeSpan.FromSeconds(1.0), 10, clock);
 
             // Act
-            DateTime end = start + TimeSpan.FromSeconds(1000.0);
-            DateTime now = start;
+            DateTime end = clock.Now.AddSeconds(1000.0);
             int count = 0;
             while (true)
             {
-                clock.Now = now;
                 TimeSpan delay = strategy.GetDelay(0);
-                now += delay;
-                if (now > end)
+                clock.Add(delay);
+                if (clock.Now > end)
                 {
                     break;
                 }
@@ -51,14 +47,11 @@ namespace QueueProcessor
         public void GetDelay_ReturnsZero_WhenNextItervalIsInThePast()
         {
             // Arrange
-            DateTime now = new DateTime(0, DateTimeKind.Utc);
-
-            ClockStub clock = new ClockStub { Now = now };
+            ClockStub clock = new ClockStub();
             IntervalPollingStrategy strategy = new IntervalPollingStrategy(TimeSpan.FromSeconds(1.0), 10, clock);
 
-            // Right now the interval is between 0s and 1s. We let the time pass until 1.5s.
-            now += TimeSpan.FromSeconds(1.5);
-            clock.Now = now;
+            // Right now the interval is between 0s and 1s. We let the time pass beyond this interval.
+            clock.AddSeconds(1.5);
 
             // Act & Assert
             TimeSpan delay = strategy.GetDelay(0);
