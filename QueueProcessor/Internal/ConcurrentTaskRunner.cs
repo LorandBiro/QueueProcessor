@@ -10,7 +10,7 @@ namespace QueueProcessor.Internal
     {
         private readonly List<TaskRunner> runners = new List<TaskRunner>();
 
-        public ConcurrentTaskRunner(int concurrency, Func<CancellationToken, Task> main)
+        public ConcurrentTaskRunner(int concurrency, Func<CancellationToken, Task> main, Action<Exception>? onException)
         {
             if (concurrency < 1)
             {
@@ -19,7 +19,7 @@ namespace QueueProcessor.Internal
 
             for (int i = 0; i < concurrency; i++)
             {
-                TaskRunner runner = new TaskRunner(main);
+                TaskRunner runner = new TaskRunner(main, onException);
                 this.runners.Add(runner);
             }
         }
@@ -27,11 +27,5 @@ namespace QueueProcessor.Internal
         public void Start() => this.runners.ForEach(x => x.Start());
 
         public Task StopAsync() => Task.WhenAll(this.runners.Select(x => x.StopAsync()));
-
-        public event ThreadExceptionEventHandler Exception
-        {
-            add => this.runners.ForEach(x => x.Exception += value);
-            remove => this.runners.ForEach(x => x.Exception -= value);
-        }
     }
 }

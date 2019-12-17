@@ -10,7 +10,7 @@ namespace QueueProcessor
 {
     public sealed class Receiver<TMessage> : IReceiver<TMessage>
     {
-        private readonly Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> receiver;
+        private readonly Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> func;
         private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly ILogger<TMessage> logger;
         private readonly IPollingStrategy pollingStrategy;
@@ -20,7 +20,7 @@ namespace QueueProcessor
 
         public Receiver(
             string name,
-            Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> receiver,
+            Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> func,
             Func<TMessage, IProcessor<TMessage>> router,
             ILogger<TMessage>? logger = null,
             IPollingStrategy? pollingStrategy = null,
@@ -29,17 +29,20 @@ namespace QueueProcessor
             int inflightMessageLimit = int.MaxValue)
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
-            this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
+            this.func = func ?? throw new ArgumentNullException(nameof(func));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
             this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(TimeSpan.FromSeconds(5.0));
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
-            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
-            this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
+            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
         }
 
         public string Name { get; }
+
+        public void Start() => this.runner.Start();
+
+        public Task StopAsync() => this.runner.StopAsync();
 
         public void OnClosed(IEnumerable<TMessage> messages)
         {
@@ -50,10 +53,6 @@ namespace QueueProcessor
 
             this.limiter.OnClosed(messages.Count());
         }
-
-        public void Start() => this.runner.Start();
-
-        public Task StopAsync() => this.runner.StopAsync();
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)
@@ -68,7 +67,7 @@ namespace QueueProcessor
 
                 try
                 {
-                    IReadOnlyCollection<TMessage> batch = await this.receiver(cancellationToken).ConfigureAwait(false);
+                    IReadOnlyCollection<TMessage> batch = await this.func(cancellationToken).ConfigureAwait(false);
                     var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
                     foreach (var item in messagesWithRoutes)
                     {

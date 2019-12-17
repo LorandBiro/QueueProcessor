@@ -25,7 +25,7 @@ namespace QueueProcessor
             Debug.WriteLine($"{service}: {message} Received => Transfer to {processor.Name}");
         }
 
-        public void LogServiceException(string service, Exception exception)
+        public void LogException(string service, Exception exception)
         {
             if (exception is null)
             {

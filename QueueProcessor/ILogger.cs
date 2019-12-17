@@ -8,6 +8,6 @@ namespace QueueProcessor
         void LogMessageProcessed(string service, TMessage message, Result result, Op op);
         void LogMessageFailed(string service, TMessage message, Result result, Op op);
 
-        void LogServiceException(string service, Exception exception);
+        void LogException(string service, Exception exception);
     }
 }

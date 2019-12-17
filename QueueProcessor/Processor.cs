@@ -13,7 +13,7 @@ namespace QueueProcessor
         private static readonly Func<Job<TMessage>, Op> OnSuccessDefault = job => Op.Close;
         private static readonly Func<Job<TMessage>, Op> OnFailureDefault = job => Op.InstantRetry;
 
-        private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> processor;
+        private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> func;
         private readonly ILogger<TMessage> logger;
         private readonly int maxBatchSize;
         private readonly Func<Job<TMessage>, Op> onSuccess;
@@ -24,7 +24,7 @@ namespace QueueProcessor
 
         public Processor(
             string name,
-            Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> processor,
+            Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> func,
             ILogger<TMessage>? logger = null,
             int concurrency = 1,
             int maxBatchSize = 1,
@@ -34,10 +34,9 @@ namespace QueueProcessor
             ICircuitBreaker? circuitBreaker = null)
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
-            this.processor = processor ?? throw new ArgumentNullException(nameof(processor));
+            this.func = func ?? throw new ArgumentNullException(nameof(func));
             this.logger = logger ?? new DebugLogger<TMessage>();
-            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync);
-            this.runner.Exception += (sender, e) => this.logger.LogServiceException(this.Name, e.Exception);
+            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.maxBatchSize = maxBatchSize;
             this.queue = new BatchingQueue<Job<TMessage>>();
             this.onSuccess = onSuccess ?? OnSuccessDefault;
@@ -64,7 +63,7 @@ namespace QueueProcessor
                 IReadOnlyList<Job<TMessage>> jobs = await this.queue.DequeueAsync(this.maxBatchSize, cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    await this.processor(jobs, cancellationToken).ConfigureAwait(false);
+                    await this.func(jobs, cancellationToken).ConfigureAwait(false);
                     HandleResults(jobs, this.onSuccess);
 
                     this.circuitBreaker.OnSuccess();

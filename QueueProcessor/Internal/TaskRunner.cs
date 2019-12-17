@@ -10,15 +10,15 @@ namespace QueueProcessor.Internal
         private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(1.0);
 
         private readonly Func<CancellationToken, Task> mainAsync;
+        private readonly Action<Exception>? onException;
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private Task? task;
 
-        public TaskRunner(Func<CancellationToken, Task> main)
+        public TaskRunner(Func<CancellationToken, Task> main, Action<Exception>? onException)
         {
             this.mainAsync = main ?? throw new ArgumentNullException(nameof(main));
+            this.onException = onException;
         }
-
-        public event ThreadExceptionEventHandler? Exception;
 
         public void Start()
         {
@@ -57,7 +57,7 @@ namespace QueueProcessor.Internal
                         return;
                     }
 
-                    this.Exception?.Invoke(this, new ThreadExceptionEventArgs(exception));
+                    this.onException?.Invoke(exception);
                     await Task.Delay(RestartDelay).ConfigureAwait(false);
                 }
             }
