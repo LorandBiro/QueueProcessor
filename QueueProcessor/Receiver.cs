@@ -33,7 +33,7 @@ namespace QueueProcessor
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
             this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(TimeSpan.FromSeconds(5.0));
-            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
+            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, TimeSpan.FromSeconds(5.0), 10, TimeSpan.FromSeconds(10.0));
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
         }
@@ -61,8 +61,8 @@ namespace QueueProcessor
             while (true)
             {
                 TimeSpan normalDelay = this.pollingStrategy.GetDelay(previousBatchSize);
-                TimeSpan errorDelay = this.circuitBreaker.GetDelay();
-                await Task.Delay(errorDelay > normalDelay ? errorDelay : normalDelay, cancellationToken).ConfigureAwait(false);
+                TimeSpan? errorDelay = this.circuitBreaker.GetDelay();
+                await Task.Delay(errorDelay ?? normalDelay, cancellationToken).ConfigureAwait(false);
                 await this.limiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
                 try

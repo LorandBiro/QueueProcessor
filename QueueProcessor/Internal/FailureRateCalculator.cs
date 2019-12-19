@@ -2,7 +2,7 @@
 
 namespace QueueProcessor.Internal
 {
-    public class FailureRateCalculator
+    public class FailureRateCalculator : IFailureRateCalculator
     {
         private readonly IClock clock;
         private readonly Bucket[] buckets;

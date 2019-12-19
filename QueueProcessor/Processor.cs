@@ -41,7 +41,7 @@ namespace QueueProcessor
             this.queue = new BatchingQueue<Job<TMessage>>();
             this.onSuccess = onSuccess ?? OnSuccessDefault;
             this.onFailure = onFailure ?? OnFailureDefault;
-            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(5);
+            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, TimeSpan.FromSeconds(5.0), 10, TimeSpan.FromSeconds(10.0));
         }
 
         public string Name { get; }
@@ -59,7 +59,7 @@ namespace QueueProcessor
         {
             while (true)
             {
-                await Task.Delay(this.circuitBreaker.GetDelay(), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(this.circuitBreaker.GetDelay() ?? TimeSpan.Zero, cancellationToken).ConfigureAwait(false);
                 IReadOnlyList<Job<TMessage>> jobs = await this.queue.DequeueAsync(this.maxBatchSize, cancellationToken).ConfigureAwait(false);
                 try
                 {
