@@ -14,7 +14,7 @@ namespace QueueProcessor
         private long intervalStart;
 
         public CircuitBreaker(double failureRateTreshold, TimeSpan interval, int bucketCount, TimeSpan bucketDuration)
-            : this(failureRateTreshold, interval, new FailureRateCalculator(bucketCount, bucketDuration), new Clock())
+            : this(failureRateTreshold, interval, new FailureRateCalculator(bucketCount, bucketDuration), Clock.Instance)
         {
         }
 

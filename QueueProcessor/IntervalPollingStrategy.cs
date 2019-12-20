@@ -15,7 +15,7 @@ namespace QueueProcessor
             : this(interval, int.MaxValue) { }
 
         public IntervalPollingStrategy(TimeSpan interval, int repeatLimit)
-            : this(interval, repeatLimit, new Clock()) { }
+            : this(interval, repeatLimit, Clock.Instance) { }
 
         public IntervalPollingStrategy(TimeSpan interval, int repeatLimit, IClock clock)
         {

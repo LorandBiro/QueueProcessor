@@ -11,7 +11,7 @@ namespace QueueProcessor.Internal
         private DateTime currentBucketTimestamp;
 
         public FailureRateCalculator(int bucketCount, TimeSpan bucketDuration)
-            : this(bucketCount, bucketDuration, new Clock()) { }
+            : this(bucketCount, bucketDuration, Clock.Instance) { }
 
         public FailureRateCalculator(int bucketCount, TimeSpan bucketDuration, IClock clock)
         {
