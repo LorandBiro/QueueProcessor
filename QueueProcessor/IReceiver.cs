@@ -8,14 +8,10 @@ namespace QueueProcessor
     {
         event Action<IReadOnlyCollection<TMessage>> Received;
 
-        bool IsEnabled { get; }
-
         void Start();
 
         Task StopAsync();
 
-        void Enable();
-
-        void Disable();
+        void OnMessageCountChanged(int count);
     }
 }

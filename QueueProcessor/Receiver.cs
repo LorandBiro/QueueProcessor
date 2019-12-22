@@ -15,6 +15,7 @@ namespace QueueProcessor
         private readonly ITimer pollingStrategy;
         private readonly ICircuitBreaker circuitBreaker;
         private readonly int maxBatchSize;
+        private readonly int limit;
         private readonly ConcurrentTaskRunner runner;
 
         private readonly ReceiverLimiter limiter = new ReceiverLimiter();
@@ -26,8 +27,14 @@ namespace QueueProcessor
             ITimer? pollingStrategy = null,
             ICircuitBreaker? circuitBreaker = null,
             int concurrency = 1,
-            int maxBatchSize = 1)
+            int maxBatchSize = 1,
+            int limit = int.MaxValue)
         {
+            if (limit < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(limit), limit, "The limit must be at least 1.");
+            }
+
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
             this.logger = logger ?? new DebugLogger<TMessage>();
@@ -35,21 +42,34 @@ namespace QueueProcessor
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, new IntervalTimer(TimeSpan.FromSeconds(5.0)), 10, TimeSpan.FromSeconds(10.0));
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.maxBatchSize = maxBatchSize;
+            this.limit = limit;
         }
 
         public event Action<IReadOnlyCollection<TMessage>>? Received;
 
         public string Name { get; }
 
-        public bool IsEnabled => !this.limiter.IsEnabled;
-
         public void Start() => this.runner.Start();
 
         public Task StopAsync() => this.runner.StopAsync();
 
-        public void Enable() => this.limiter.Disable();
-
-        public void Disable() => this.limiter.Enable();
+        public void OnMessageCountChanged(int count)
+        {
+            if (this.limiter.IsEnabled)
+            {
+                if (count < this.limit)
+                {
+                    this.limiter.Disable();
+                }
+            }
+            else
+            {
+                if (count >= this.limit)
+                {
+                    this.limiter.Enable();
+                }
+            }
+        }
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)

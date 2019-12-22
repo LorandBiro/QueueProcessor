@@ -16,6 +16,6 @@ namespace QueueProcessor.Timers
             this.delay = delay;
         }
 
-        public TimeSpan GetDelay() => TimeSpan.Zero;
+        public TimeSpan GetDelay() => delay;
     }
 }
