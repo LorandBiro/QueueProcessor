@@ -44,9 +44,9 @@ namespace QueueProcessor
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, TimeSpan.FromSeconds(5.0), 10, TimeSpan.FromSeconds(10.0));
         }
 
-        public string Name { get; }
+        public event Action<IReadOnlyCollection<TMessage>>? Closed;
 
-        public event Action<IEnumerable<TMessage>>? Closed;
+        public string Name { get; }
 
         public void Enqueue(IEnumerable<TMessage> messages) => this.queue.Enqueue(messages.Select(x => new Job<TMessage>(x)));
 
@@ -98,7 +98,7 @@ namespace QueueProcessor
             {
                 if (jobGroup.Key == typeof(CloseOp))
                 {
-                    this.Closed?.Invoke(jobGroup.Select(x => x.Message));
+                    this.Closed?.Invoke(jobGroup.Select(x => x.Message).ToList());
                 }
                 else if (jobGroup.Key == typeof(RetryOp))
                 {

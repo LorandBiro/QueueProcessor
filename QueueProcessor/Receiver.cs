@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,8 +22,7 @@ namespace QueueProcessor
             ILogger<TMessage>? logger = null,
             IPollingStrategy? pollingStrategy = null,
             ICircuitBreaker? circuitBreaker = null,
-            int concurrency = 1,
-            int inflightMessageLimit = int.MaxValue)
+            int concurrency = 1)
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
@@ -32,26 +30,22 @@ namespace QueueProcessor
             this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(int.MaxValue, TimeSpan.FromSeconds(5.0));
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, TimeSpan.FromSeconds(5.0), 10, TimeSpan.FromSeconds(10.0));
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
-            this.limiter = new ReceiverLimiter(inflightMessageLimit);
+            this.limiter = new ReceiverLimiter();
         }
 
-        public event Action<IEnumerable<TMessage>>? Received;
+        public event Action<IReadOnlyCollection<TMessage>>? Received;
 
         public string Name { get; }
+
+        public bool IsEnabled => !this.limiter.IsEnabled;
 
         public void Start() => this.runner.Start();
 
         public Task StopAsync() => this.runner.StopAsync();
 
-        public void OnClosed(IEnumerable<TMessage> messages)
-        {
-            if (messages is null)
-            {
-                throw new ArgumentNullException(nameof(messages));
-            }
+        public void Enable() => this.limiter.Disable();
 
-            this.limiter.OnClosed(messages.Count());
-        }
+        public void Disable() => this.limiter.Enable();
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)

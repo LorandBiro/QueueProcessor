@@ -64,6 +64,7 @@ namespace QueueProcessor.Reference
 
             return new QueueService<MySqlMessage>(
                 new DebugLogger<MySqlMessage>(),
+                1000,
                 receiver,
                 _ => handler,
                 handler,

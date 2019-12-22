@@ -14,6 +14,6 @@ namespace QueueProcessor
 
         void Enqueue(IEnumerable<TMessage> messages);
 
-        event Action<IEnumerable<TMessage>> Closed;
+        event Action<IReadOnlyCollection<TMessage>> Closed;
     }
 }

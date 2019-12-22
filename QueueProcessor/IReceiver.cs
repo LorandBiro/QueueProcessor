@@ -6,12 +6,16 @@ namespace QueueProcessor
 {
     public interface IReceiver<TMessage>
     {
-        event Action<IEnumerable<TMessage>> Received;
+        event Action<IReadOnlyCollection<TMessage>> Received;
 
-        void OnClosed(IEnumerable<TMessage> messages);
+        bool IsEnabled { get; }
 
         void Start();
 
         Task StopAsync();
+
+        void Enable();
+
+        void Disable();
     }
 }

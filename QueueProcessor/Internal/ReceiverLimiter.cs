@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,22 +6,9 @@ namespace QueueProcessor.Internal
 {
     public sealed class ReceiverLimiter
     {
-        private readonly object locker = new object();
-
-        private readonly int limit;
         private List<Wait> waits = new List<Wait>();
 
-        public ReceiverLimiter(int limit)
-        {
-            if (limit < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(limit), limit, "The limit must be at least 1.");
-            }
-
-            this.limit = limit;
-        }
-
-        public int Count { get; private set; }
+        public bool IsEnabled { get; private set; }
 
         public Task WaitAsync(CancellationToken cancellationToken = default)
         {
@@ -31,44 +17,29 @@ namespace QueueProcessor.Internal
                 return Task.FromCanceled(cancellationToken);
             }
 
-            lock (this.locker)
+            if (!this.IsEnabled)
             {
-                if (this.Count < this.limit)
-                {
-                    return Task.CompletedTask;
-                }
-
-                Wait wait = new Wait(cancellationToken);
-                this.waits.Add(wait);
-                return wait.Task;
+                return Task.CompletedTask;
             }
+
+            Wait wait = new Wait(cancellationToken);
+            this.waits.Add(wait);
+            return wait.Task;
         }
 
-        public int OnRecieved(int count)
+        public void Enable()
         {
-            lock (this.locker)
-            {
-                return this.Count += count;
-            }
+            this.IsEnabled = true;
         }
 
-        public void OnClosed(int count)
+        public void Disable()
         {
-            List<Wait>? waitsToComplete = null;
-            lock (this.locker)
-            {
-                this.Count -= count;
-                if (this.Count < this.limit && this.waits.Count > 0)
-                {
-                    waitsToComplete = this.waits;
-                    this.waits = new List<Wait>();
-                }
-            }
+            this.IsEnabled = false;
 
-            if (waitsToComplete != null)
-            {
-                waitsToComplete.ForEach(x => x.Complete());
-            }
+            List<Wait> waitsToComplete = this.waits;
+            this.waits = new List<Wait>();
+
+            waitsToComplete.ForEach(x => x.Complete());
         }
 
         private class Wait

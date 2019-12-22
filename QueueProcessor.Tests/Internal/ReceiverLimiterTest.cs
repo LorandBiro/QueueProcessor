@@ -10,7 +10,7 @@ namespace QueueProcessor.Internal
         public void WaitAsync_ReturnsCanceledTask_WhenAlreadyCanceled()
         {
             // Arrange
-            ReceiverLimiter limiter = new ReceiverLimiter(100);
+            ReceiverLimiter limiter = new ReceiverLimiter();
             
             // Act & Assert
             Task task = limiter.WaitAsync(new CancellationToken(true));
@@ -23,8 +23,8 @@ namespace QueueProcessor.Internal
             // Arrange
             using (CancellationTokenSource cts = new CancellationTokenSource())
             {
-                ReceiverLimiter limiter = new ReceiverLimiter(100);
-                limiter.OnRecieved(100);
+                ReceiverLimiter limiter = new ReceiverLimiter();
+                limiter.Enable();
 
                 // Act & Assert
                 Task task = limiter.WaitAsync(cts.Token);
@@ -37,34 +37,18 @@ namespace QueueProcessor.Internal
         }
 
         [Fact]
-        public void WaitAsync_ReturnsCompletedTask_WhenUnderLimit()
-        {
-            // Arrange
-            ReceiverLimiter limiter = new ReceiverLimiter(100);
-            limiter.OnRecieved(50);
-
-            // Act & Assert
-            Task task = limiter.WaitAsync();
-            Assert.Equal(TaskStatus.RanToCompletion, task.Status);
-        }
-
-        [Fact]
         public void WaitAsync_CompletesTask_WhenCountGoesUnderLimit()
         {
             // Arrange
-            ReceiverLimiter limiter = new ReceiverLimiter(1);
-            limiter.OnRecieved(2);
+            ReceiverLimiter limiter = new ReceiverLimiter();
+            limiter.Enable();
 
             // Act & Assert
             Task task = limiter.WaitAsync();
             Assert.Equal(TaskStatus.WaitingForActivation, task.Status);
 
             // Act & Assert
-            limiter.OnClosed(1);
-            Assert.Equal(TaskStatus.WaitingForActivation, task.Status);
-
-            // Act & Assert
-            limiter.OnClosed(1);
+            limiter.Disable();
             Assert.Equal(TaskStatus.RanToCompletion, task.Status);
         }
 
@@ -74,8 +58,8 @@ namespace QueueProcessor.Internal
             // Arrange
             using (CancellationTokenSource cts = new CancellationTokenSource())
             {
-                ReceiverLimiter limiter = new ReceiverLimiter(1);
-                limiter.OnRecieved(1);
+                ReceiverLimiter limiter = new ReceiverLimiter();
+                limiter.Enable();
 
                 // Act & Assert
                 Task task1 = limiter.WaitAsync();
