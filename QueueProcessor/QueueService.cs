@@ -10,11 +10,11 @@ namespace QueueProcessor
         private readonly object countLocker = new object();
 
         private readonly ILogger<TMessage> logger;
-        private readonly IReceiver<TMessage> receiver;
+        private readonly IReceiver<TMessage>? receiver;
         private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly IReadOnlyList<IProcessor<TMessage>> processors;
 
-        public QueueService(ILogger<TMessage> logger, IReceiver<TMessage> receiver, Func<TMessage, IProcessor<TMessage>> router, params IProcessor<TMessage>[] processors)
+        public QueueService(ILogger<TMessage> logger, IReceiver<TMessage>? receiver, Func<TMessage, IProcessor<TMessage>> router, params IProcessor<TMessage>[] processors)
         {
             if (processors is null)
             {
@@ -22,8 +22,12 @@ namespace QueueProcessor
             }
 
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
-            this.receiver.Received += this.OnReceived;
+            this.receiver = receiver;
+            if (this.receiver != null)
+            {
+                this.receiver.Received += this.OnReceived;
+            }
+
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.processors = processors as IReadOnlyList<IProcessor<TMessage>> ?? processors.ToList();
             foreach (IProcessor<TMessage> processor in this.processors)
@@ -46,12 +50,16 @@ namespace QueueProcessor
                 processor.Start();
             }
 
-            this.receiver.Start();
+            this.receiver?.Start();
         }
 
         public async Task StopAsync()
         {
-            await this.receiver.StopAsync().ConfigureAwait(false);
+            if (this.receiver != null)
+            {
+                await this.receiver.StopAsync().ConfigureAwait(false);
+            }
+
             foreach (IProcessor<TMessage> processor in this.processors)
             {
                 await processor.StopAsync().ConfigureAwait(false);
@@ -73,7 +81,7 @@ namespace QueueProcessor
             lock (this.countLocker)
             {
                 this.Count += batch.Count;
-                this.receiver.OnMessageCountChanged(this.Count);
+                this.receiver?.OnMessageCountChanged(this.Count);
             }
 
             var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
@@ -93,7 +101,7 @@ namespace QueueProcessor
             lock (this.countLocker)
             {
                 this.Count -= batch.Count;
-                this.receiver.OnMessageCountChanged(this.Count);
+                this.receiver?.OnMessageCountChanged(this.Count);
             }
         }
     }
