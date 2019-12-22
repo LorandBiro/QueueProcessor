@@ -2,13 +2,16 @@
 using System;
 using System.Threading;
 
-namespace QueueProcessor.Utils
+namespace QueueProcessor.Timers
 {
-    public class IntervalTimer : IIntervalTimer
+    public class IntervalTimer : ITimer
     {
         private readonly long interval;
         private readonly IClock clock;
         private long intervalStart;
+
+        public IntervalTimer(TimeSpan interval)
+            : this(interval, Clock.Instance) { }
 
         public IntervalTimer(TimeSpan interval, IClock clock)
         {

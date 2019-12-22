@@ -2,7 +2,7 @@
 using System;
 using Xunit;
 
-namespace QueueProcessor.Utils
+namespace QueueProcessor.Timers
 {
     public class IntervalTimerTest
     {

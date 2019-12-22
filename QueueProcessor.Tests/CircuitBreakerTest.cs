@@ -1,5 +1,5 @@
 ﻿using QueueProcessor.Mocks;
-using QueueProcessor.Utils;
+using QueueProcessor.Timers;
 using Xunit;
 
 namespace QueueProcessor
@@ -10,10 +10,10 @@ namespace QueueProcessor
         public void ReturnNull_WhenClosed()
         {
             // Arrange
-            IntervalTimerStub intervalTimer = new IntervalTimerStub();
+            TimerStub timer = new TimerStub();
             FailureRateCalculatorStub failureRateCalculator = new FailureRateCalculatorStub();
             ClockStub clock = new ClockStub();
-            CircuitBreaker circuitBreaker = new CircuitBreaker(0.5, intervalTimer, failureRateCalculator);
+            CircuitBreaker circuitBreaker = new CircuitBreaker(0.5, timer, failureRateCalculator);
 
             failureRateCalculator.FailureRate = 0.25;
             Assert.Null(circuitBreaker.GetDelay());

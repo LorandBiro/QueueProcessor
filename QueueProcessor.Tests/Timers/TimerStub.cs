@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace QueueProcessor.Utils
+namespace QueueProcessor.Timers
 {
-    public class IntervalTimerStub : IIntervalTimer
+    public class TimerStub : ITimer
     {
         public TimeSpan Delay { get; set; }
 

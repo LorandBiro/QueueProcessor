@@ -1,5 +1,5 @@
 ﻿using QueueProcessor.Internal;
-using QueueProcessor.Utils;
+using QueueProcessor.Timers;
 using System;
 
 namespace QueueProcessor
@@ -7,16 +7,16 @@ namespace QueueProcessor
     public class CircuitBreaker : ICircuitBreaker
     {
         private readonly double failureRateTreshold;
-        private readonly IIntervalTimer intervalTimer;
+        private readonly ITimer timer;
         private readonly IFailureRateCalculator failureRateCalculator;
         private bool isOpen;
 
-        public CircuitBreaker(double failureRateTreshold, TimeSpan interval, int bucketCount, TimeSpan bucketDuration)
-            : this(failureRateTreshold, new IntervalTimer(interval, Clock.Instance), new FailureRateCalculator(bucketCount, bucketDuration))
+        public CircuitBreaker(double failureRateTreshold, ITimer timer, int bucketCount, TimeSpan bucketDuration)
+            : this(failureRateTreshold, timer, new FailureRateCalculator(bucketCount, bucketDuration))
         {
         }
 
-        public CircuitBreaker(double failureRateTreshold, IIntervalTimer intervalTimer, IFailureRateCalculator failureRateCalculator)
+        public CircuitBreaker(double failureRateTreshold, ITimer timer, IFailureRateCalculator failureRateCalculator)
         {
             if (failureRateTreshold <= 0.0 || failureRateTreshold > 1.0)
             {
@@ -24,7 +24,7 @@ namespace QueueProcessor
             }
 
             this.failureRateTreshold = failureRateTreshold;
-            this.intervalTimer = intervalTimer;
+            this.timer = timer;
             this.failureRateCalculator = failureRateCalculator ?? throw new ArgumentNullException(nameof(failureRateCalculator));
         }
 
@@ -54,7 +54,7 @@ namespace QueueProcessor
                 }
             }
 
-            return this.intervalTimer.GetDelay();
+            return this.timer.GetDelay();
         }
     }
 }

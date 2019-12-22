@@ -1,4 +1,5 @@
 ﻿using QueueProcessor.Internal;
+using QueueProcessor.Timers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -41,7 +42,7 @@ namespace QueueProcessor
             this.queue = new BatchingQueue<Job<TMessage>>();
             this.onSuccess = onSuccess ?? OnSuccessDefault;
             this.onFailure = onFailure ?? OnFailureDefault;
-            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, TimeSpan.FromSeconds(5.0), 10, TimeSpan.FromSeconds(10.0));
+            this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, new IntervalTimer(TimeSpan.FromSeconds(5.0)), 10, TimeSpan.FromSeconds(10.0));
         }
 
         public event Action<IReadOnlyCollection<TMessage>>? Closed;
