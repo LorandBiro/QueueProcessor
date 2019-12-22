@@ -103,6 +103,11 @@ namespace QueueProcessor
                 this.Count -= batch.Count;
                 this.receiver?.OnMessageCountChanged(this.Count);
             }
+
+            foreach (TMessage message in batch)
+            {
+                this.logger.LogMessageClosed(message);
+            }
         }
     }
 }

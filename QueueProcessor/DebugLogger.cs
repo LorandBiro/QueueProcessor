@@ -15,14 +15,19 @@ namespace QueueProcessor
             Debug.WriteLine($"{service}: {message} {result} => {op}");
         }
 
-        public void LogMessageReceived(TMessage message, IProcessor<TMessage> processor)
+        public void LogMessageReceived(TMessage message, IProcessor<TMessage> nextProcessor)
         {
-            if (processor is null)
+            if (nextProcessor is null)
             {
-                throw new ArgumentNullException(nameof(processor));
+                throw new ArgumentNullException(nameof(nextProcessor));
             }
 
-            Debug.WriteLine($"{message} Received => Transfer to {processor.Name}");
+            Debug.WriteLine($"{message} Received => Transfer to {nextProcessor.Name}");
+        }
+
+        public void LogMessageClosed(TMessage message)
+        {
+            Debug.WriteLine($"{message} Closed");
         }
 
         public void LogException(string service, Exception exception)

@@ -4,7 +4,8 @@ namespace QueueProcessor
 {
     public interface ILogger<TMessage>
     {
-        void LogMessageReceived(TMessage message, IProcessor<TMessage> processor);
+        void LogMessageReceived(TMessage message, IProcessor<TMessage> nextProcessor);
+        void LogMessageClosed(TMessage message);
 
         void LogMessageProcessed(string service, TMessage message, Result result, Op op);
         void LogMessageFailed(string service, TMessage message, Result result, Op op);
