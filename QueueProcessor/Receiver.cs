@@ -11,7 +11,6 @@ namespace QueueProcessor
     public sealed class Receiver<TMessage> : IReceiver<TMessage>
     {
         private readonly Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> func;
-        private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly ILogger<TMessage> logger;
         private readonly IPollingStrategy pollingStrategy;
         private readonly ICircuitBreaker circuitBreaker;
@@ -21,7 +20,6 @@ namespace QueueProcessor
         public Receiver(
             string name,
             Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> func,
-            Func<TMessage, IProcessor<TMessage>> router,
             ILogger<TMessage>? logger = null,
             IPollingStrategy? pollingStrategy = null,
             ICircuitBreaker? circuitBreaker = null,
@@ -30,13 +28,14 @@ namespace QueueProcessor
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
-            this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.logger = logger ?? new DebugLogger<TMessage>();
             this.pollingStrategy = pollingStrategy ?? new IntervalPollingStrategy(int.MaxValue, TimeSpan.FromSeconds(5.0));
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, TimeSpan.FromSeconds(5.0), 10, TimeSpan.FromSeconds(10.0));
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
         }
+
+        public event Action<IReadOnlyCollection<TMessage>>? Received;
 
         public string Name { get; }
 
@@ -68,17 +67,7 @@ namespace QueueProcessor
                 try
                 {
                     IReadOnlyCollection<TMessage> batch = await this.func(cancellationToken).ConfigureAwait(false);
-                    var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
-                    foreach (var item in messagesWithRoutes)
-                    {
-                        this.logger.LogMessageReceived(this.Name, item.Message, item.Processor);
-                    }
-
-                    foreach (IGrouping<IProcessor<TMessage>, TMessage> group in messagesWithRoutes.GroupBy(x => x.Processor, x => x.Message))
-                    {
-                        group.Key.Enqueue(group);
-                    }
-
+                    this.Received?.Invoke(batch);
                     this.circuitBreaker.OnSuccess();
                     previousBatchSize = batch.Count;
                 }

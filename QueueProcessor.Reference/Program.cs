@@ -29,7 +29,6 @@ namespace QueueProcessor.Reference
             Receiver<MySqlMessage> receiver = new Receiver<MySqlMessage>(
                 "MySqlToSqsReceiver",
                 ct => mySql.ReceiveAsync(5, 60, ct),
-                _ => handler,
                 concurrency: 4);
             handler = new Processor<MySqlMessage>(
                 "MySqlToSqsHandler",
@@ -63,7 +62,13 @@ namespace QueueProcessor.Reference
                 maxBatchSize: 100,
                 maxBatchDelay: TimeSpan.FromSeconds(10.0));
 
-            return new QueueService<MySqlMessage>(receiver, handler, archiver, remover);
+            return new QueueService<MySqlMessage>(
+                new DebugLogger<MySqlMessage>(),
+                receiver,
+                _ => handler,
+                handler,
+                archiver,
+                remover);
         }
     }
 }
