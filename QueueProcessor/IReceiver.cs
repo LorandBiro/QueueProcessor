@@ -6,7 +6,7 @@ namespace QueueProcessor
 {
     public interface IReceiver<TMessage>
     {
-        event Action<IReadOnlyCollection<TMessage>> Received;
+        event Action<IEnumerable<TMessage>> Received;
 
         void OnClosed(IEnumerable<TMessage> messages);
 

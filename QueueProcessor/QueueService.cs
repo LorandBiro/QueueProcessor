@@ -24,7 +24,7 @@ namespace QueueProcessor
 
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
-            this.receiver.Received += OnReceived;
+            this.receiver.Received += this.Enqueue;
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.processors = processors as IReadOnlyList<IProcessor<TMessage>> ?? processors.ToList();
             if (this.processors.Count == 0)
@@ -52,7 +52,7 @@ namespace QueueProcessor
             }
         }
 
-        private void OnReceived(IReadOnlyCollection<TMessage> batch)
+        public void Enqueue(IEnumerable<TMessage> batch)
         {
             var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
             foreach (var item in messagesWithRoutes)

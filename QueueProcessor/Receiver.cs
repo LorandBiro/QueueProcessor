@@ -35,7 +35,7 @@ namespace QueueProcessor
             this.limiter = new ReceiverLimiter(inflightMessageLimit);
         }
 
-        public event Action<IReadOnlyCollection<TMessage>>? Received;
+        public event Action<IEnumerable<TMessage>>? Received;
 
         public string Name { get; }
 
