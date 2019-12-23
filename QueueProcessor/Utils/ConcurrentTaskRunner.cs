@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.Utils
 {
     public sealed class ConcurrentTaskRunner
     {

@@ -1,8 +1,7 @@
-﻿using QueueProcessor.Internal;
-using QueueProcessor.Timers;
+﻿using QueueProcessor.Timers;
 using System;
 
-namespace QueueProcessor
+namespace QueueProcessor.CircuitBreaking
 {
     public class CircuitBreaker : ICircuitBreaker
     {

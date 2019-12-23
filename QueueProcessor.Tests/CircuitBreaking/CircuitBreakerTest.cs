@@ -1,8 +1,8 @@
-﻿using QueueProcessor.Mocks;
-using QueueProcessor.Timers;
+﻿using QueueProcessor.Timers;
+using QueueProcessor.Utils;
 using Xunit;
 
-namespace QueueProcessor
+namespace QueueProcessor.CircuitBreaking
 {
     public class CircuitBreakerTest
     {

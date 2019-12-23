@@ -1,5 +1,7 @@
-﻿using QueueProcessor.Internal;
+﻿using QueueProcessor.CircuitBreaking;
+using QueueProcessor.Logging;
 using QueueProcessor.Timers;
+using QueueProcessor.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -7,7 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor
+namespace QueueProcessor.Processing
 {
     public sealed class Processor<TMessage> : IProcessor<TMessage>
     {

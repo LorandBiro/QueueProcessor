@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.Processing
 {
     public sealed class BatchingQueue<T>
     {

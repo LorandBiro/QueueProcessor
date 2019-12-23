@@ -1,6 +1,7 @@
-﻿using System;
+﻿using QueueProcessor.Processing;
+using System;
 
-namespace QueueProcessor
+namespace QueueProcessor.Processing
 {
     public abstract class Op
     {

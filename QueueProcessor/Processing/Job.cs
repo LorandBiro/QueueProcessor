@@ -1,4 +1,4 @@
-﻿namespace QueueProcessor
+﻿namespace QueueProcessor.Processing
 {
     public sealed class Job<TMessage>
     {

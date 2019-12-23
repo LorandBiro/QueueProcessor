@@ -1,7 +1,6 @@
-﻿using QueueProcessor.Internal;
-using System;
+﻿using System;
 
-namespace QueueProcessor.Mocks
+namespace QueueProcessor.Utils
 {
     public sealed class ClockStub : IClock
     {

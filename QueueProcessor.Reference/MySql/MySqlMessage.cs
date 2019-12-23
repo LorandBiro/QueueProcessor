@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace QueueProcessor.MySql
+namespace QueueProcessor.Reference.MySql
 {
     public sealed class MySqlMessage
     {

@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.Receiving
 {
     public class ReceiverLimiterTest
     {

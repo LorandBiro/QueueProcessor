@@ -1,7 +1,8 @@
-﻿using System;
+﻿using QueueProcessor.Processing;
+using System;
 using System.Diagnostics;
 
-namespace QueueProcessor
+namespace QueueProcessor.Logging
 {
     public sealed class DebugLogger<TMessage> : ILogger<TMessage>
     {

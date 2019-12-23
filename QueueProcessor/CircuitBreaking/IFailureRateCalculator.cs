@@ -1,4 +1,4 @@
-﻿namespace QueueProcessor.Internal
+﻿namespace QueueProcessor.CircuitBreaking
 {
     public interface IFailureRateCalculator
     {

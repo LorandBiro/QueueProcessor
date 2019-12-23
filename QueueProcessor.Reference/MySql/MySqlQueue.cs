@@ -3,14 +3,14 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using MySql.Data.MySqlClient;
-using QueueProcessor.Internal;
+using QueueProcessor.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor.MySql
+namespace QueueProcessor.Reference.MySql
 {
     public sealed class MySqlQueue
     {

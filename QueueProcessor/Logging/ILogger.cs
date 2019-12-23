@@ -1,6 +1,7 @@
-﻿using System;
+﻿using QueueProcessor.Processing;
+using System;
 
-namespace QueueProcessor
+namespace QueueProcessor.Logging
 {
     public interface ILogger<TMessage>
     {

@@ -1,4 +1,4 @@
-﻿using QueueProcessor.Internal;
+﻿using QueueProcessor.Utils;
 using System;
 using System.Threading;
 

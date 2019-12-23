@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.Utils
 {
     public interface IClock
     {

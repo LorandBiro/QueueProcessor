@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.Receiving
 {
     public sealed class ReceiverLimiter
     {

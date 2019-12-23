@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace QueueProcessor
+namespace QueueProcessor.Processing
 {
     public struct Result : IEquatable<Result>
     {

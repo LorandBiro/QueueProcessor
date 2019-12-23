@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace QueueProcessor
+namespace QueueProcessor.Receiving
 {
     public interface IReceiver<TMessage>
     {

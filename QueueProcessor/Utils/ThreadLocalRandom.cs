@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.Utils
 {
     public static class ThreadLocalRandom
     {

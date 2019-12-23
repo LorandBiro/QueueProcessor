@@ -1,6 +1,4 @@
-﻿using QueueProcessor.Internal;
-
-namespace QueueProcessor.Mocks
+﻿namespace QueueProcessor.CircuitBreaking
 {
     public class FailureRateCalculatorStub : IFailureRateCalculator
     {

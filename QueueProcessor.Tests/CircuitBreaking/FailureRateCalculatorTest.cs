@@ -1,8 +1,8 @@
-﻿using QueueProcessor.Mocks;
+﻿using QueueProcessor.Utils;
 using System;
 using Xunit;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.CircuitBreaking
 {
     public class FailureRateCalculatorTest
     {

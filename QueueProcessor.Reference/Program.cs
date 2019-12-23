@@ -1,7 +1,10 @@
 ﻿using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
-using QueueProcessor.Internal;
-using QueueProcessor.MySql;
+using QueueProcessor.Logging;
+using QueueProcessor.Processing;
+using QueueProcessor.Receiving;
+using QueueProcessor.Reference.MySql;
+using QueueProcessor.Utils;
 using System;
 using System.Linq;
 using System.Threading;

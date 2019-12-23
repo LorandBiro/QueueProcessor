@@ -1,6 +1,7 @@
-﻿using System;
+﻿using QueueProcessor.Utils;
+using System;
 
-namespace QueueProcessor.Internal
+namespace QueueProcessor.CircuitBreaking
 {
     public class FailureRateCalculator : IFailureRateCalculator
     {
