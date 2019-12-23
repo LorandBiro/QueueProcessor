@@ -12,6 +12,6 @@ namespace QueueProcessor.Receiving
 
         Task StopAsync();
 
-        void OnMessageCountChanged(int count);
+        void OnInflightCountChanged(int count);
     }
 }

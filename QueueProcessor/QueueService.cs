@@ -84,7 +84,7 @@ namespace QueueProcessor
             lock (this.countLocker)
             {
                 this.Count += batch.Count;
-                this.receiver?.OnMessageCountChanged(this.Count);
+                this.receiver?.OnInflightCountChanged(this.Count);
             }
 
             var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
@@ -104,7 +104,7 @@ namespace QueueProcessor
             lock (this.countLocker)
             {
                 this.Count -= batch.Count;
-                this.receiver?.OnMessageCountChanged(this.Count);
+                this.receiver?.OnInflightCountChanged(this.Count);
             }
 
             foreach (TMessage message in batch)

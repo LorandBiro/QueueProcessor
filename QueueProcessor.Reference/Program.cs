@@ -32,6 +32,7 @@ namespace QueueProcessor.Reference
             Receiver<MySqlMessage> receiver = new Receiver<MySqlMessage>(
                 "MySqlToSqsReceiver",
                 ct => mySql.ReceiveAsync(5, 60, ct),
+                new ReceiverStrategy(),
                 concurrency: 4);
             handler = new Processor<MySqlMessage>(
                 "MySqlToSqsHandler",
