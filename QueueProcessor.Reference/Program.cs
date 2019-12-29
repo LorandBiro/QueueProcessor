@@ -52,14 +52,14 @@ namespace QueueProcessor.Reference
                     await mySql.EnqueueAsync(new[] { newPayload }, ct);
                 },
                 maxBatchSize: 1,
-                onSuccess: x => Op.TransferTo(remover),
-                onFailure: x => x.Message.ReceivedCount < 10 ? Op.Close : Op.TransferTo(archiver));
+                onSuccess: x => remover,
+                onFailure: x => x.Message.ReceivedCount >= 10 ? archiver : null);
             archiver = new Processor<MySqlMessage>(
                 "MySqlToSqsArchiver",
                 (jobs, ct) => mySql.ArchiveAsync(jobs.Select(x => x.Message), ct),
                 concurrency: 8,
                 maxBatchSize: 10,
-                onSuccess: x => Op.TransferTo(remover));
+                onSuccess: x => remover);
             remover = new Processor<MySqlMessage>(
                 "MySqlToSqsRemover",
                 (jobs, ct) => mySql.RemoveAsync(jobs.Select(x => x.Message), ct),

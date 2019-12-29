@@ -8,8 +8,7 @@ namespace QueueProcessor.Logging
         void LogMessageReceived(TMessage message, IProcessor<TMessage> nextProcessor);
         void LogMessageClosed(TMessage message);
 
-        void LogMessageProcessed(string service, TMessage message, Result result, Op op);
-        void LogMessageFailed(string service, TMessage message, Result result, Op op);
+        void LogMessageProcessed(string service, TMessage message, Result result, IProcessor<TMessage>? nextProcessor);
 
         void LogException(string service, Exception exception);
     }

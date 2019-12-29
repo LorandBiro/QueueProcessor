@@ -13,14 +13,13 @@ namespace QueueProcessor.Processing
 {
     public sealed class Processor<TMessage> : IProcessor<TMessage>
     {
-        private static readonly Func<Job<TMessage>, Op> OnSuccessDefault = job => Op.Close;
-        private static readonly Func<Job<TMessage>, Op> OnFailureDefault = job => Op.InstantRetry;
+        private static readonly Func<Job<TMessage>, IProcessor<TMessage>?> DefaultRouter = job => null;
 
         private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> func;
         private readonly ILogger<TMessage> logger;
         private readonly int maxBatchSize;
-        private readonly Func<Job<TMessage>, Op> onSuccess;
-        private readonly Func<Job<TMessage>, Op> onFailure;
+        private readonly Func<Job<TMessage>, IProcessor<TMessage>?> onSuccess;
+        private readonly Func<Job<TMessage>, IProcessor<TMessage>?> onFailure;
         private readonly ICircuitBreaker circuitBreaker;
         private readonly ConcurrentTaskRunner runner;
         private readonly BatchingQueue<Job<TMessage>> queue;
@@ -32,8 +31,8 @@ namespace QueueProcessor.Processing
             int concurrency = 1,
             int maxBatchSize = 1,
             TimeSpan maxBatchDelay = default,
-            Func<Job<TMessage>, Op>? onSuccess = null,
-            Func<Job<TMessage>, Op>? onFailure = null,
+            Func<Job<TMessage>, IProcessor<TMessage>?>? onSuccess = null,
+            Func<Job<TMessage>, IProcessor<TMessage>?>? onFailure = null,
             ICircuitBreaker? circuitBreaker = null)
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -42,8 +41,8 @@ namespace QueueProcessor.Processing
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.maxBatchSize = maxBatchSize;
             this.queue = new BatchingQueue<Job<TMessage>>();
-            this.onSuccess = onSuccess ?? OnSuccessDefault;
-            this.onFailure = onFailure ?? OnFailureDefault;
+            this.onSuccess = onSuccess ?? DefaultRouter;
+            this.onFailure = onFailure ?? DefaultRouter;
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, new IntervalTimer(TimeSpan.FromSeconds(5.0)), 10, TimeSpan.FromSeconds(10.0));
         }
 
@@ -67,7 +66,7 @@ namespace QueueProcessor.Processing
                 try
                 {
                     await this.func(jobs, cancellationToken).ConfigureAwait(false);
-                    HandleResults(jobs, this.onSuccess);
+                    HandleResults(jobs);
 
                     this.circuitBreaker.OnSuccess();
                 }
@@ -83,40 +82,29 @@ namespace QueueProcessor.Processing
                         job.SetResult(Result.Error(exception));
                     }
 
-                    HandleResults(jobs, this.onFailure);
+                    HandleResults(jobs);
                     this.circuitBreaker.OnFailure();
                 }
             }
         }
 
-        private void HandleResults(IReadOnlyList<Job<TMessage>> jobs, Func<Job<TMessage>, Op> onResult)
+        private void HandleResults(IReadOnlyList<Job<TMessage>> jobs)
         {
-            var jobsWithOps = jobs.Select(x => new { x.Message, x.Result, Op = onResult(x) }).ToList();
-            foreach (var jobWithOp in jobsWithOps)
+            List<(Job<TMessage> Job, IProcessor<TMessage>? Route)> jobRouteMap = jobs.Select(x => (Job: x, Route: (x.Result.IsError ? this.onFailure : this.onSuccess)(x))).ToList();
+            foreach ((Job<TMessage> Job, IProcessor<TMessage>? Route) jobRoutePair in jobRouteMap)
             {
-                this.logger.LogMessageProcessed(this.Name, jobWithOp.Message, jobWithOp.Result, jobWithOp.Op);
+                this.logger.LogMessageProcessed(this.Name, jobRoutePair.Job.Message, jobRoutePair.Job.Result, jobRoutePair.Route);
             }
 
-            foreach (var jobGroup in jobsWithOps.GroupBy(x => x.Op.GetType()))
+            foreach (IGrouping<IProcessor<TMessage>, TMessage> group in jobRouteMap.GroupBy(x => x.Route, x => x.Job))
             {
-                if (jobGroup.Key == typeof(CloseOp))
+                if (group.Key == null)
                 {
-                    this.Closed?.Invoke(jobGroup.Select(x => x.Message).ToList());
+                    this.Closed?.Invoke(group.ToList());
+                    continue;
                 }
-                else if (jobGroup.Key == typeof(RetryOp))
-                {
-                    foreach (RetryOp retry in jobGroup.Cast<RetryOp>())
-                    {
-                        // Insert into queue
-                    }
-                }
-                else if (jobGroup.Key == typeof(TransferOp<TMessage>))
-                {
-                    foreach (var transferGroup in jobGroup.Select(x => new { x.Message, Op = (TransferOp < TMessage > )x.Op }).GroupBy(x => x.Op.Processor, x => x.Message))
-                    {
-                        transferGroup.Key.Enqueue(transferGroup);
-                    }
-                }
+
+                group.Key.Enqueue(group);
             }
         }
     }

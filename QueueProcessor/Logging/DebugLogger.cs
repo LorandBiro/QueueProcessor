@@ -6,14 +6,16 @@ namespace QueueProcessor.Logging
 {
     public sealed class DebugLogger<TMessage> : ILogger<TMessage>
     {
-        public void LogMessageFailed(string service, TMessage message, Result result, Op op)
+        public void LogMessageProcessed(string service, TMessage message, Result result, IProcessor<TMessage>? nextProcessor)
         {
-            Debug.Fail($"{service}: {message} {result} => {op}", result.Exception?.ToString());
-        }
-
-        public void LogMessageProcessed(string service, TMessage message, Result result, Op op)
-        {
-            Debug.WriteLine($"{service}: {message} {result} => {op}");
+            if (result.IsError)
+            {
+                Debug.Fail($"{service}: {message} {result} => {nextProcessor?.Name}", result.Exception?.ToString());
+            }
+            else
+            {
+                Debug.WriteLine($"{service}: {message} {result} => {nextProcessor?.Name}");
+            }
         }
 
         public void LogMessageReceived(TMessage message, IProcessor<TMessage> nextProcessor)
@@ -23,7 +25,7 @@ namespace QueueProcessor.Logging
                 throw new ArgumentNullException(nameof(nextProcessor));
             }
 
-            Debug.WriteLine($"{message} Received => Transfer to {nextProcessor.Name}");
+            Debug.WriteLine($"{message} Received => {nextProcessor.Name}");
         }
 
         public void LogMessageClosed(TMessage message)
