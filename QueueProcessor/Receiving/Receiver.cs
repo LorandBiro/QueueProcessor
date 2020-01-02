@@ -25,7 +25,7 @@ namespace QueueProcessor.Receiving
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
             this.strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
-            this.logger = logger ?? new DebugLogger<TMessage>();
+            this.logger = logger ?? NullLogger<TMessage>.Instance;
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
         }
 

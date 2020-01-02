@@ -1,6 +1,5 @@
 ﻿using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
-using QueueProcessor.Logging;
 using QueueProcessor.Processing;
 using QueueProcessor.Receiving;
 using QueueProcessor.Reference.MySql;
@@ -41,7 +40,7 @@ namespace QueueProcessor.Reference
         private static QueueService<long> CreateUserIdInsertQueue()
         {
             Processor<long> handler = new Processor<long>("BatchInsert", (jobs, ct) => Task.Delay(100), maxBatchSize: 1000, maxBatchDelay: TimeSpan.FromSeconds(10.0));
-            return new QueueService<long>(new DebugLogger<long>(), null, x => handler, handler);
+            return new QueueService<long>(null, null, x => handler, handler);
         }
 
         private static QueueService<MySqlMessage> CreateMySqlToSqs(MySqlQueue mySql)
@@ -86,7 +85,7 @@ namespace QueueProcessor.Reference
                 maxBatchDelay: TimeSpan.FromSeconds(10.0));
 
             return new QueueService<MySqlMessage>(
-                new DebugLogger<MySqlMessage>(),
+                null,
                 receiver,
                 _ => handler,
                 handler,

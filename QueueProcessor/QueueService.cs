@@ -17,14 +17,14 @@ namespace QueueProcessor
         private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly IReadOnlyList<IProcessor<TMessage>> processors;
 
-        public QueueService(ILogger<TMessage> logger, IReceiver<TMessage>? receiver, Func<TMessage, IProcessor<TMessage>> router, params IProcessor<TMessage>[] processors)
+        public QueueService(ILogger<TMessage>? logger, IReceiver<TMessage>? receiver, Func<TMessage, IProcessor<TMessage>> router, params IProcessor<TMessage>[] processors)
         {
             if (processors is null)
             {
                 throw new ArgumentNullException(nameof(processors));
             }
 
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.logger = logger ?? NullLogger<TMessage>.Instance;
             this.receiver = receiver;
             if (this.receiver != null)
             {

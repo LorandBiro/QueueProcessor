@@ -36,7 +36,7 @@ namespace QueueProcessor.Processing
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
-            this.logger = logger ?? new DebugLogger<TMessage>();
+            this.logger = logger ?? NullLogger<TMessage>.Instance;
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
             this.queue = new BatchingQueue<Job<TMessage>>(Clock.Instance, maxBatchSize, maxBatchDelay);
             this.onSuccess = onSuccess ?? DefaultRouter;
