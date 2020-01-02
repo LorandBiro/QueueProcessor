@@ -69,6 +69,8 @@ namespace QueueProcessor
             }
         }
 
+        public void Enqueue(params TMessage[] batch) => this.Enqueue((IEnumerable<TMessage>)batch);
+
         public void Enqueue(IEnumerable<TMessage> batch)
         {
             if (batch is null)

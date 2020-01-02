@@ -17,7 +17,6 @@ namespace QueueProcessor.Processing
 
         private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> func;
         private readonly ILogger<TMessage> logger;
-        private readonly int maxBatchSize;
         private readonly Func<Job<TMessage>, IProcessor<TMessage>?> onSuccess;
         private readonly Func<Job<TMessage>, IProcessor<TMessage>?> onFailure;
         private readonly ICircuitBreaker circuitBreaker;
@@ -39,8 +38,7 @@ namespace QueueProcessor.Processing
             this.func = func ?? throw new ArgumentNullException(nameof(func));
             this.logger = logger ?? new DebugLogger<TMessage>();
             this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
-            this.maxBatchSize = maxBatchSize;
-            this.queue = new BatchingQueue<Job<TMessage>>();
+            this.queue = new BatchingQueue<Job<TMessage>>(Clock.Instance, maxBatchSize, maxBatchDelay);
             this.onSuccess = onSuccess ?? DefaultRouter;
             this.onFailure = onFailure ?? DefaultRouter;
             this.circuitBreaker = circuitBreaker ?? new CircuitBreaker(0.5, new IntervalTimer(TimeSpan.FromSeconds(5.0)), 10, TimeSpan.FromSeconds(10.0));
@@ -52,9 +50,13 @@ namespace QueueProcessor.Processing
 
         public void Enqueue(IEnumerable<TMessage> messages) => this.queue.Enqueue(messages.Select(x => new Job<TMessage>(x)));
 
-        public void Start() => this.runner.Start();
+        public void Start()
+        {
+            this.runner.Start();
+            this.queue.Start();
+        }
 
-        public Task StopAsync() => this.runner.StopAsync();
+        public Task StopAsync() => Task.WhenAll(this.runner.StopAsync(), this.queue.StopAsync());
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)
@@ -62,7 +64,7 @@ namespace QueueProcessor.Processing
             while (true)
             {
                 await Task.Delay(this.circuitBreaker.GetDelay() ?? TimeSpan.Zero, cancellationToken).ConfigureAwait(false);
-                IReadOnlyList<Job<TMessage>> jobs = await this.queue.DequeueAsync(this.maxBatchSize, cancellationToken).ConfigureAwait(false);
+                IReadOnlyList<Job<TMessage>> jobs = await this.queue.DequeueAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
                     await this.func(jobs, cancellationToken).ConfigureAwait(false);
@@ -96,7 +98,7 @@ namespace QueueProcessor.Processing
                 this.logger.LogMessageProcessed(this.Name, jobRoutePair.Job.Message, jobRoutePair.Job.Result, jobRoutePair.Route);
             }
 
-            foreach (IGrouping<IProcessor<TMessage>, TMessage> group in jobRouteMap.GroupBy(x => x.Route, x => x.Job))
+            foreach (IGrouping<IProcessor<TMessage>?, TMessage> group in jobRouteMap.GroupBy(x => x.Route, x => x.Job.Message))
             {
                 if (group.Key == null)
                 {

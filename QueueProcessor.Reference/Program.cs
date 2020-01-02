@@ -16,6 +16,19 @@ namespace QueueProcessor.Reference
     {
         public static async Task Main()
         {
+            QueueService<long> queue = CreateUserIdInsertQueue();
+            queue.Start();
+            while (true)
+            {
+                queue.Enqueue(ThreadLocalRandom.Next());
+                await Task.Delay(10);
+            }
+
+            return;
+
+
+
+
             MySqlQueue mySql = new MySqlQueue(new TelemetryClient(TelemetryConfiguration.Active), "Server=db;Port=3306;Database=queue;Uid=root;Pwd=root;");
             await mySql.InitializeAsync();
 
@@ -23,6 +36,12 @@ namespace QueueProcessor.Reference
 
             mySqlToSqs.Start();
             await Task.Delay(Timeout.InfiniteTimeSpan);
+        }
+
+        private static QueueService<long> CreateUserIdInsertQueue()
+        {
+            Processor<long> handler = new Processor<long>("BatchInsert", (jobs, ct) => Task.Delay(100), maxBatchSize: 1000, maxBatchDelay: TimeSpan.FromSeconds(10.0));
+            return new QueueService<long>(new DebugLogger<long>(), null, x => handler, handler);
         }
 
         private static QueueService<MySqlMessage> CreateMySqlToSqs(MySqlQueue mySql)
