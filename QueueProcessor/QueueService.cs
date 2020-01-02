@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor
 {
-    public sealed class QueueService<TMessage>
+    public sealed class QueueService<TMessage> : IAsyncDisposable
     {
         private readonly object countLocker = new object();
 
@@ -56,16 +56,16 @@ namespace QueueProcessor
             this.receiver?.Start();
         }
 
-        public async Task StopAsync()
+        public async ValueTask DisposeAsync()
         {
             if (this.receiver != null)
             {
-                await this.receiver.StopAsync().ConfigureAwait(false);
+                await this.receiver.DisposeAsync().ConfigureAwait(false);
             }
 
             foreach (IProcessor<TMessage> processor in this.processors)
             {
-                await processor.StopAsync().ConfigureAwait(false);
+                await processor.DisposeAsync().ConfigureAwait(false);
             }
         }
 

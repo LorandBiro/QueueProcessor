@@ -19,7 +19,7 @@ namespace QueueProcessor.Processing
     /// queue or put into a consumer queue so it can be served in a FIFO order.
     /// </remarks>
     /// <typeparam name="T">The type of the items in the queue.</typeparam>
-    public sealed class BatchingQueue<T>
+    public sealed class BatchingQueue<T> : IAsyncDisposable
     {
         // Dependencies
         private readonly IClock clock;
@@ -56,8 +56,6 @@ namespace QueueProcessor.Processing
         public int Count { get; private set; }
 
         public void Start() => this.runner.Start();
-
-        public Task StopAsync() => this.runner.DisposeAsync().AsTask();
 
         public void Enqueue(T item)
         {
@@ -132,6 +130,8 @@ namespace QueueProcessor.Processing
                 return consumer.Task;
             }
         }
+
+        public ValueTask DisposeAsync() => this.runner.DisposeAsync();
 
         private async Task TimerMainAsync(CancellationToken cancellationToken)
         {

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor.Utils
 {
-    public sealed class TaskRunner : IDisposable, IAsyncDisposable
+    public sealed class TaskRunner : IAsyncDisposable
     {
         private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(1.0);
 
@@ -74,7 +74,5 @@ namespace QueueProcessor.Utils
             this.cancellationTokenSource.Dispose();
             this.isDisposed = true;
         }
-
-        public void Dispose() => this.DisposeAsync().AsTask().Wait();
     }
 }

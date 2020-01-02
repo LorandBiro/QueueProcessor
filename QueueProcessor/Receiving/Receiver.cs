@@ -35,9 +35,9 @@ namespace QueueProcessor.Receiving
 
         public void Start() => this.runner.Start();
 
-        public Task StopAsync() => this.runner.DisposeAsync().AsTask();
-
         public void OnInflightCountChanged(int count) => this.strategy.OnInflightCountChanged(count);
+
+        public ValueTask DisposeAsync() => this.runner.DisposeAsync();
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)
