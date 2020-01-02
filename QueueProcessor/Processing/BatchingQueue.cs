@@ -57,7 +57,7 @@ namespace QueueProcessor.Processing
 
         public void Start() => this.runner.Start();
 
-        public Task StopAsync() => this.runner.StopAsync();
+        public Task StopAsync() => this.runner.DisposeAsync().AsTask();
 
         public void Enqueue(T item)
         {

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor.Utils
 {
-    public sealed class ConcurrentTaskRunner
+    public sealed class ConcurrentTaskRunner : IDisposable, IAsyncDisposable
     {
         private readonly List<TaskRunner> runners = new List<TaskRunner>();
 
@@ -26,6 +26,8 @@ namespace QueueProcessor.Utils
 
         public void Start() => this.runners.ForEach(x => x.Start());
 
-        public Task StopAsync() => Task.WhenAll(this.runners.Select(x => x.StopAsync()));
+        public async ValueTask DisposeAsync() => await Task.WhenAll(this.runners.Select(x => x.DisposeAsync().AsTask())).ConfigureAwait(false);
+
+        public void Dispose() => this.DisposeAsync().AsTask().Wait();
     }
 }

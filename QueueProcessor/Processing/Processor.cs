@@ -56,7 +56,7 @@ namespace QueueProcessor.Processing
             this.queue.Start();
         }
 
-        public Task StopAsync() => Task.WhenAll(this.runner.StopAsync(), this.queue.StopAsync());
+        public Task StopAsync() => Task.WhenAll(this.runner.DisposeAsync().AsTask(), this.queue.StopAsync());
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We don't know what exceptions to expect here, so we need to catch all.")]
         private async Task MainAsync(CancellationToken cancellationToken)

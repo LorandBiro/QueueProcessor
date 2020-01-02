@@ -1,6 +1,4 @@
-﻿using QueueProcessor.CircuitBreaking;
-using QueueProcessor.Logging;
-using QueueProcessor.Timers;
+﻿using QueueProcessor.Logging;
 using QueueProcessor.Utils;
 using System;
 using System.Collections.Generic;
@@ -37,7 +35,7 @@ namespace QueueProcessor.Receiving
 
         public void Start() => this.runner.Start();
 
-        public Task StopAsync() => this.runner.StopAsync();
+        public Task StopAsync() => this.runner.DisposeAsync().AsTask();
 
         public void OnInflightCountChanged(int count) => this.strategy.OnInflightCountChanged(count);
 

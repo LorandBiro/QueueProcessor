@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace QueueProcessor.Utils
 {
-    public sealed class TaskRunner : IDisposable
+    public sealed class TaskRunner : IDisposable, IAsyncDisposable
     {
         private static readonly TimeSpan RestartDelay = TimeSpan.FromSeconds(1.0);
 
@@ -13,6 +13,7 @@ namespace QueueProcessor.Utils
         private readonly Action<Exception>? onException;
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private Task? task;
+        private bool isDisposed;
 
         public TaskRunner(Func<CancellationToken, Task> main, Action<Exception>? onException)
         {
@@ -22,23 +23,17 @@ namespace QueueProcessor.Utils
 
         public void Start()
         {
+            if (this.isDisposed)
+            {
+                throw new ObjectDisposedException(null);
+            }
+
             if (this.task != null)
             {
                 throw new InvalidOperationException();
             }
 
             this.task = Task.Run(this.MainAsync);
-        }
-
-        public async Task StopAsync()
-        {
-            if (this.task == null)
-            {
-                throw new InvalidOperationException();
-            }
-
-            this.cancellationTokenSource.Cancel();
-            await this.task.ConfigureAwait(false);
         }
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "We have to catch everything, we can't let background processes crash.")]
@@ -48,7 +43,7 @@ namespace QueueProcessor.Utils
             {
                 try
                 {
-                    await this.mainAsync(cancellationTokenSource.Token).ConfigureAwait(false);
+                    await this.mainAsync(this.cancellationTokenSource.Token).ConfigureAwait(false);
                 }
                 catch (Exception exception)
                 {
@@ -63,6 +58,23 @@ namespace QueueProcessor.Utils
             }
         }
 
-        public void Dispose() => this.cancellationTokenSource.Dispose();
+        public async ValueTask DisposeAsync()
+        {
+            if (this.isDisposed)
+            {
+                return;
+            }
+
+            if (this.task != null)
+            {
+                this.cancellationTokenSource.Cancel();
+                await this.task.ConfigureAwait(false);
+            }
+
+            this.cancellationTokenSource.Dispose();
+            this.isDisposed = true;
+        }
+
+        public void Dispose() => this.DisposeAsync().AsTask().Wait();
     }
 }
