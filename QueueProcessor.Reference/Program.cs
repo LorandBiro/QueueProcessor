@@ -19,8 +19,13 @@ namespace QueueProcessor.Reference
             queue.Start();
             while (true)
             {
-                queue.Enqueue(ThreadLocalRandom.Next());
-                await Task.Delay(10);
+                for (int i = 0; i < 10; i++)
+                {
+                    queue.Enqueue(ThreadLocalRandom.Next());
+                    await Task.Delay(100);
+                }
+
+                Console.WriteLine(queue.Count);
             }
 
             return;
@@ -39,7 +44,7 @@ namespace QueueProcessor.Reference
 
         private static QueueService<long> CreateUserIdInsertQueue()
         {
-            Processor<long> handler = new Processor<long>("BatchInsert", (jobs, ct) => Task.Delay(100), maxBatchSize: 1000, maxBatchDelay: TimeSpan.FromSeconds(10.0));
+            Processor<long> handler = new Processor<long>("BatchInsert", (jobs, ct) => ThreadLocalRandom.NextDouble() < 0.9 ? Task.Delay(100) : Task.FromException(new Exception()), maxBatchSize: 1000, maxBatchDelay: TimeSpan.FromSeconds(1.0), retry: _ => true);
             return new QueueService<long>(null, null, x => handler, handler);
         }
 
