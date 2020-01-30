@@ -11,7 +11,6 @@ namespace QueueProcessor.Receiving
     public sealed class Receiver<TMessage> : IReceiver<TMessage>
     {
         private readonly Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> func;
-        private readonly ILogger<TMessage> logger;
         private readonly IReceiverStrategy strategy;
         private readonly ConcurrentTaskRunner runner;
         private readonly ITracer<TMessage> tracer;
@@ -20,15 +19,13 @@ namespace QueueProcessor.Receiving
             string name,
             Func<CancellationToken, Task<IReadOnlyCollection<TMessage>>> func,
             IReceiverStrategy strategy,
-            ILogger<TMessage>? logger = null,
             int concurrency = 1,
             ITracer<TMessage>? tracer = null)
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
             this.strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
-            this.logger = logger ?? NullLogger<TMessage>.Instance;
-            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
+            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.tracer.TrackException(this.Name, e));
             this.tracer = tracer ?? NullTracer<TMessage>.Instance;
         }
 

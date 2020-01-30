@@ -45,7 +45,7 @@ namespace QueueProcessor.Reference
         private static QueueService<long> CreateUserIdInsertQueue()
         {
             Processor<long> handler = new Processor<long>("BatchInsert", (jobs, ct) => ThreadLocalRandom.NextDouble() < 0.9 ? Task.Delay(100) : Task.FromException(new Exception()), maxBatchSize: 1000, maxBatchDelay: TimeSpan.FromSeconds(1.0), retry: _ => true);
-            return new QueueService<long>(null, null, x => handler, handler);
+            return new QueueService<long>(null, x => handler, handler);
         }
 
         private static QueueService<MySqlMessage> CreateMySqlToSqs(MySqlQueue mySql)
@@ -90,7 +90,6 @@ namespace QueueProcessor.Reference
                 maxBatchDelay: TimeSpan.FromSeconds(10.0));
 
             return new QueueService<MySqlMessage>(
-                null,
                 receiver,
                 _ => handler,
                 handler,

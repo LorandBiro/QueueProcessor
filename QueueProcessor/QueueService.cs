@@ -12,19 +12,17 @@ namespace QueueProcessor
     {
         private readonly object countLocker = new object();
 
-        private readonly ILogger<TMessage> logger;
         private readonly IReceiver<TMessage>? receiver;
         private readonly Func<TMessage, IProcessor<TMessage>> router;
         private readonly IReadOnlyList<IProcessor<TMessage>> processors;
 
-        public QueueService(ILogger<TMessage>? logger, IReceiver<TMessage>? receiver, Func<TMessage, IProcessor<TMessage>> router, params IProcessor<TMessage>[] processors)
+        public QueueService(IReceiver<TMessage>? receiver, Func<TMessage, IProcessor<TMessage>> router, params IProcessor<TMessage>[] processors)
         {
             if (processors is null)
             {
                 throw new ArgumentNullException(nameof(processors));
             }
 
-            this.logger = logger ?? NullLogger<TMessage>.Instance;
             this.receiver = receiver;
             if (this.receiver != null)
             {
@@ -89,13 +87,7 @@ namespace QueueProcessor
                 this.receiver?.OnInflightCountChanged(this.Count);
             }
 
-            var messagesWithRoutes = batch.Select(x => new { Message = x, Processor = this.router(x) }).ToList();
-            foreach (var item in messagesWithRoutes)
-            {
-                this.logger.LogMessageReceived(item.Message, item.Processor);
-            }
-
-            foreach (IGrouping<IProcessor<TMessage>, TMessage> group in messagesWithRoutes.GroupBy(x => x.Processor, x => x.Message))
+            foreach (IGrouping<IProcessor<TMessage>, TMessage> group in batch.GroupBy(x => this.router(x), x => x))
             {
                 group.Key.Enqueue(group);
             }
@@ -107,11 +99,6 @@ namespace QueueProcessor
             {
                 this.Count -= batch.Count;
                 this.receiver?.OnInflightCountChanged(this.Count);
-            }
-
-            foreach (TMessage message in batch)
-            {
-                this.logger.LogMessageClosed(message);
             }
         }
     }

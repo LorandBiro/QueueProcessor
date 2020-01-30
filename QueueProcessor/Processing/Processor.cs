@@ -16,7 +16,6 @@ namespace QueueProcessor.Processing
         private static readonly Func<Job<TMessage>, IProcessor<TMessage>?> DefaultRouter = job => null;
 
         private readonly Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> func;
-        private readonly ILogger<TMessage> logger;
         private readonly Func<Job<TMessage>, IProcessor<TMessage>?> onSuccess;
         private readonly Func<Job<TMessage>, IProcessor<TMessage>?> onFailure;
         private readonly ICircuitBreaker circuitBreaker;
@@ -28,7 +27,6 @@ namespace QueueProcessor.Processing
         public Processor(
             string name,
             Func<IReadOnlyList<Job<TMessage>>, CancellationToken, Task> func,
-            ILogger<TMessage>? logger = null,
             int concurrency = 1,
             int maxBatchSize = 1,
             TimeSpan maxBatchDelay = default,
@@ -40,8 +38,7 @@ namespace QueueProcessor.Processing
         {
             this.Name = name ?? throw new ArgumentNullException(nameof(name));
             this.func = func ?? throw new ArgumentNullException(nameof(func));
-            this.logger = logger ?? NullLogger<TMessage>.Instance;
-            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.logger.LogException(this.Name, e));
+            this.runner = new ConcurrentTaskRunner(concurrency, this.MainAsync, e => this.tracer.TrackException(this.Name, e));
             this.queue = new BatchingQueue<TMessage>(Clock.Instance, maxBatchSize, maxBatchDelay);
             this.onSuccess = onSuccess ?? DefaultRouter;
             this.onFailure = onFailure ?? DefaultRouter;
@@ -129,13 +126,7 @@ namespace QueueProcessor.Processing
 
         private void HandleResults(IReadOnlyList<Job<TMessage>> jobs)
         {
-            List<(Job<TMessage> Job, IProcessor<TMessage>? Route)> jobRouteMap = jobs.Select(x => (Job: x, Route: (x.Result.IsError ? this.onFailure : this.onSuccess)(x))).ToList();
-            foreach ((Job<TMessage> Job, IProcessor<TMessage>? Route) jobRoutePair in jobRouteMap)
-            {
-                this.logger.LogMessageProcessed(this.Name, jobRoutePair.Job.Message, jobRoutePair.Job.Result, jobRoutePair.Route);
-            }
-
-            foreach (IGrouping<IProcessor<TMessage>?, TMessage> group in jobRouteMap.GroupBy(x => x.Route, x => x.Job.Message))
+            foreach (IGrouping<IProcessor<TMessage>?, TMessage> group in jobs.GroupBy(x => (x.Result.IsError ? this.onFailure : this.onSuccess)(x), x => x.Message))
             {
                 if (group.Key == null)
                 {
